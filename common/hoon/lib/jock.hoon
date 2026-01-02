@@ -89,12 +89,12 @@
       %'('  %')'  %'{'  %'}'  %'['  %']'
       %'='  %'<'  %'>'  %'#'
       %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
-      ::%'->' TODO decide if necessary or to do in two steps
+      %'->'
   ==
 ::
 +$  jatom
   $+  jatom
-  $~  [[%loobean p=%.n] q=%.n]
+  $~  [[%logical p=%.n] q=%.n]
   $:  $%  [%chars p=cord]
           [%string p=tape]
           [%number p=@ud]
@@ -104,7 +104,7 @@
           [%real16 p=@rh]
           [%real32 p=@rs]
           [%real128 p=@rq]
-          [%logical p=?]
+          [%logical p=?(%.y %.n)]
           [%date p=@da]
           [%span p=@dr]
           [%path p=path]
@@ -187,7 +187,7 @@
   ::  Double-quoted tape: "foo" -> (list @tD)
   ++  string
     %+  stag  %string
-    (cook crip (ifix [doq doq] (star ;~(less soq prn))))
+    (ifix [doq doq] (star ;~(less doq prn)))
   ::  Numeric literal: 1234, 1_234 -> @ud
   ++  number
     %+  stag  %number
@@ -196,8 +196,8 @@
   ++  sint
     %+  stag  %sint
     ;~  pose
-      (cook |=(n=@ud (new:si & n)) ;~(pfix lus dem:ag))
-      (cook |=(n=@ud (new:si | n)) ;~(pfix hep dem:ag))
+        (cook |=(n=@ud (new:si & n)) ;~(pfix lus dem:ag))
+        (cook |=(n=@ud (new:si | n)) ;~(pfix hep dem:ag))
     ==
     :: TODO switch to dep when fixed
   ::  Hexadecimal literal: 0xBA1A3F, 0xba1a3f -> @x
@@ -236,7 +236,28 @@
   ::  Span:  ~d15h23m45s -> @dr
   ++  span
     %+  stag  %span
-    crub:so
+    %+  cook
+      |=  [a=(list [p=?(%d %h %m %s) q=@]) b=(list @)]
+      =+  rop=`tarp`[0 0 0 0 b]
+      |-  ^-  @dr
+      ?~  a  (yule rop)
+      ?-  p.i.a
+        %d  $(a t.a, d.rop (add q.i.a d.rop))
+        %h  $(a t.a, h.rop (add q.i.a h.rop))
+        %m  $(a t.a, m.rop (add q.i.a m.rop))
+        %s  $(a t.a, s.rop (add q.i.a s.rop))
+      ==
+    ;~  plug
+      %+  most
+        dot
+      ;~  pose
+        ;~(pfix (just 'd') (stag %d dim:ag))
+        ;~(pfix (just 'h') (stag %h dim:ag))
+        ;~(pfix (just 'm') (stag %m dim:ag))
+        ;~(pfix (just 's') (stag %s dim:ag))
+      ==
+      ;~(pose ;~(pfix ;~(plug dot dot) (most dot qix:ab)) (easy ~))
+    ==
   ::  Path:  /foo/bar/baz -> path
   ++  jpath
     %+  stag  %path
@@ -256,6 +277,7 @@
         real16
         real32
         real128
+        logical
         date
         span
         jpath
@@ -310,15 +332,15 @@
       [%punctuator `jpunc`%'((']
     (stag %punctuator punctuator)
   ++  punctuator
-    :: ;~  pose
-    ::   (cold %'->' (jest '->'))   :: must come before solo '-'
-    %-  perk
-    :~  %'.'  %';'  %','  %':'  %'&'  %'$'
-        %'@'  %'?'  %'!'  :: XXX exclude %'((' which is a pseudo-punctuator
-        %'('  %')'  %'{'  %'}'  %'['  %']'
-        %'='  %'<'  %'>'  %'#'
-        %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
-    ==
+    ;~  pose
+        (cold %'->' (jest '->'))   :: must come before solo '-'
+        %-  perk
+        :~  %'.'  %';'  %','  %':'  %'&'  %'$'
+            %'@'  %'?'  %'!'  :: XXX exclude %'((' which is a pseudo-punctuator
+            %'('  %')'  %'{'  %'}'  %'['  %']'
+            %'='  %'<'  %'>'  %'#'
+            %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
+    ==  ==
   ::
   ::  The parser's precedence rules:
   ::  1.  Keywords
