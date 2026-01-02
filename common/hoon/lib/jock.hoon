@@ -58,12 +58,16 @@
   $?  %let
       %func
       %lambda
-      %class
+      %struct
+      %impl
+      %trait
+      %union
+      %alias
+      %object
       %if
       %else
       %crash
       %assert
-      %object
       %compose
       %loop
       %defer
@@ -85,15 +89,25 @@
       %'('  %')'  %'{'  %'}'  %'['  %']'
       %'='  %'<'  %'>'  %'#'
       %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
+      ::%'->' TODO decide if necessary or to do in two steps
   ==
 ::
 +$  jatom
   $+  jatom
   $~  [[%loobean p=%.n] q=%.n]
-  $:  $%  [%string p=cord]
+  $:  $%  [%chars p=cord]
+          [%string p=tape]
           [%number p=@ud]
-          [%hexadecimal p=@ux]
-          [%loobean p=?]
+          [%sint p=@sd]
+          [%hex p=@x]
+          [%real p=@rd]
+          [%real16 p=@rh]
+          [%real32 p=@rs]
+          [%real128 p=@rq]
+          [%logical p=?]
+          [%date p=@da]
+          [%span p=@dr]
+          [%path p=path]
       ==
       q=?(%.y %.n)                  ::  constant flag
   ==
@@ -121,21 +135,135 @@
           ==
 ++  gav  (cold ~ (star ;~(pose val var gah)))
 ++  gae  ;~(pose gav (easy ~))
+::  '1_234_567' -> 0i1234567
+:: ++  dep  (ape:ag (bass 1.000 ;~(plug ted:ab (star ;~(pfix ;~(plug cab gay) tid:ab)))))
+++  dep  (ape:ag (bass 1.000 ;~(plug ted:ab (star ;~(pfix cab tid:ab)))))
+::
+++  roy
+  =/  moo
+    |=  a=tape
+    :-  (lent a)
+    (scan a (bass 10 (plus sid:ab)))
+  ;~  pose
+    ;~  plug
+      (easy %d)
+      ;~(pose (cold | hep) (cold & lus) (easy &))
+      ;~  plug  dim:ag
+        ;~  pose
+          ;~(pfix dot (cook moo (plus (shim '0' '9'))))
+          (easy [0 0])
+        ==
+        ;~  pose
+          ;~  pfix
+            (just 'e')
+            ;~(plug ;~(pose (cold | hep) (easy &)) dim:ag)
+          ==
+          (easy [& 0])
+        ==
+      ==
+    ==
+    ::
+    ;~  plug
+      (easy %i)
+      ;~  sfix
+        ;~(pose (cold | hep) (easy &))
+        (jest 'inf')
+      ==
+    ==
+    ::
+    ;~  plug
+      (easy %n)
+      (cold ~ (jest 'nan'))
+    ==
+  ==
 ::
 ++  tokenize
   =|  fun=?(%.y %.n)
   |%
-  ++  string             (stag %string (cook crip (ifix [soq soq] (star ;~(less soq prn)))))
-  ++  number             (stag %number dem:ag)
-  ++  hexadecimal        (stag %hexadecimal ;~(pfix (jest %'0x') hex))
-  ++  loobean
-    %+  stag  %loobean
-    ;~(pose (cold %.y (jest %true)) (cold %.n (jest %false)))
+  ::  Single-quoted cord: 'foo' -> @t
+  ++  chars
+    %+  stag  %chars
+    (cook crip (ifix [soq soq] (star ;~(less soq prn))))
+  ::  Double-quoted tape: "foo" -> (list @tD)
+  ++  string
+    %+  stag  %string
+    (cook crip (ifix [doq doq] (star ;~(less soq prn))))
+  ::  Numeric literal: 1234, 1_234 -> @ud
+  ++  number
+    %+  stag  %number
+    ;~(pose dep dem)
+  ::  Signed numeric literal: -1234, +1_234 -> @sd
+  ++  sint
+    %+  stag  %sint
+    ;~  pose
+      (cook |=(n=@ud (new:si & n)) ;~(pfix lus dem:ag))
+      (cook |=(n=@ud (new:si | n)) ;~(pfix hep dem:ag))
+    ==
+    :: TODO switch to dep when fixed
+  ::  Hexadecimal literal: 0xBA1A3F, 0xba1a3f -> @x
+  ++  hex
+    %+  stag  %hex
+    ;~(pfix (jest %'0x') ^hex)
+  ::  Real 64-bit float: 3.14, +3.14, -0.001 -> @rd
+  ++  real
+    %+  stag  %real
+    (cook ryld (cook royl-cell:so roy))
+  ::  Real 16-bit float: 3.14, +3.14, -0.001 -> @rh
+  ++  real16
+    %+  stag  %real16
+    (cook rylh (cook royl-cell:so roy))
+  ::  Real 32-bit float: 3.14, +3.14, -0.001 -> @rs
+  ++  real32
+    %+  stag  %real32
+    (cook ryls (cook royl-cell:so roy))
+  ::  Real 128-bit float: 3.14, +3.14, -0.001 -> @rq
+  ++  real128 
+    %+  stag  %real128
+    (cook rylq (cook royl-cell:so roy))
+  ::  Real 64-bit float alias
+  ++  real64  real
+  ::  Logical loobean:  %true, %false -> ?
+  ++  logical
+    %+  stag  %logical
+    ;~  pose
+        (cold %.y (jest %true))
+        (cold %.n (jest %false))
+    ==
+  ::  Date:  @2026.1.1..12.0.0..ffff -> @da
+  ++  date
+    %+  stag  %date
+    ;~(pfix pat (cook year when:so))
+  ::  Span:  ~d15h23m45s -> @dr
+  ++  span
+    %+  stag  %span
+    crub:so
+  ::  Path:  /foo/bar/baz -> path
+  ++  jpath
+    %+  stag  %path
+    stap
   ::
-  ++  tagged-literal     (stag %literal (hart literal %.n))
-  ++  literal            ;~(pose loobean hexadecimal number string)
-  ++  tagged-symbol      (stag %literal (hart symbol %.y))
-  ++  symbol             ;~(pfix cen literal)
+  ++  tagged-literal
+    %+  stag  %literal
+    (hart literal %.n)
+  ++  literal
+    ;~  pose
+        chars
+        string
+        number
+        sint
+        hex
+        real
+        real16
+        real32
+        real128
+        date
+        span
+        jpath
+    ==
+  ++  tagged-symbol
+    %+  stag  %literal
+    (hart symbol %.y)
+  ++  symbol          ;~(pfix cen literal)
   ::  add a suffix label
   ++  hart
     |*  [sef=rule gob=*]
@@ -150,37 +278,40 @@
   ::  the goal is to parse a function call into the pseudo-punctuator '(('.
   ::  This only happens if there is a name or type immediately preceding '(',
   ::  e.g. foo(bar)  ->  'foo' '((' 'bar' ')'
-  ++  tagged-name        (stag %name name)                :: [%name term]
-  ++  name               snek                             :: term with _
-  ++  snek               %+  cook
-                           |=(a=tape (rap 3 ^-((list @) a)))
-                         ;~(plug low (star ;~(pose nud low cab)))
+  ++  tagged-name       (stag %name sym)
   ::
-  ++  tagged-type        (stag %type type)                :: [%type 'Cord']
-  ++  type               aul                              :: Cord
-  ++  aul                %+  cook                         :: Ulll
-                             |=(a=tape (rap 3 ^-((list @) a)))
-                         ;~(plug hig (star low))
+  ++  tagged-type
+    %+  stag  %type
+    nik
+  ::  PascalCase identifier (type names)
+  ++  nik
+    %+  cook
+      |=(a=tape (rap 3 ^-((list @) a)))
+    ;~(plug hig (star ;~(pose hig low)))
   ::
   ++  tagged-keyword     (stag %keyword keyword)
   ++  keyword
     %-  perk
-    :~  %let  %func  %lambda  %class
-        %if  %else  %crash  %assert
-        %object  %compose  %loop  %defer
+    :~  %let  %func  %lambda
+        %struct  %impl  %trait  %union  %alias
+        %object  %if  %else  %crash  %assert
+        %compose  %loop  %defer
         %recur  %match  %switch  %eval  %with  %this
         %import  %as  %print
     ==
   ::
-  ++  tagged-punctuator  %+  cook
-                           |=  =token
-                           ^-  ^token
-                           ?.  &(fun =([%punctuator %'('] token))
-                             token
-                          ::  =.  fun  %.n
-                           [%punctuator `jpunc`%'((']
-                         (stag %punctuator punctuator)
+  ++  tagged-punctuator
+    %+  cook
+      |=  =token
+      ^-  ^token
+      ?.  &(fun =([%punctuator %'('] token))
+        token
+    ::  =.  fun  %.n
+      [%punctuator `jpunc`%'((']
+    (stag %punctuator punctuator)
   ++  punctuator
+    :: ;~  pose
+    ::   (cold %'->' (jest '->'))   :: must come before solo '-'
     %-  perk
     :~  %'.'  %';'  %','  %':'  %'&'  %'$'
         %'@'  %'?'  %'!'  :: XXX exclude %'((' which is a pseudo-punctuator
