@@ -135,9 +135,6 @@
           ==
 ++  gav  (cold ~ (star ;~(pose val var gah)))
 ++  gae  ;~(pose gav (easy ~))
-::  '1_234_567' -> 0i1234567
-:: ++  dep  (ape:ag (bass 1.000 ;~(plug ted:ab (star ;~(pfix ;~(plug cab gay) tid:ab)))))
-++  dep  (ape:ag (bass 1.000 ;~(plug ted:ab (star ;~(pfix cab tid:ab)))))
 ::
 ++  roy
   =/  moo
@@ -188,10 +185,10 @@
   ++  string
     %+  stag  %string
     (ifix [doq doq] (star ;~(less doq prn)))
-  ::  Numeric literal: 1234, 1_234 -> @ud
+  ::  Numeric literal: 1234 -> @ud
   ++  number
     %+  stag  %number
-    ;~(pose dep dem)
+    dem
   ::  Signed numeric literal: -1234, +1_234 -> @sd
   ++  sint
     %+  stag  %sint
