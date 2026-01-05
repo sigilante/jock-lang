@@ -512,6 +512,8 @@
       [%fork p=jype q=jype]
       ::  %list
       [%list type=jype]
+      ::  %noun
+      [%noun p=jnoun-type]
       ::  %set
       [%set type=jype]
       ::  %hoon is a vase for the supplied subject (presumably hoon or tiny)
@@ -542,6 +544,12 @@
       %logical
       %date
       %span
+      %path
+  ==
+::  Jype noun base types; corresponds to jnoun tags
++$  jnoun-type
+  $+  jnoun-type
+  $?  %string
       %path
   ==
 ::  Jype core executable, either a direct lambda or a regular core
@@ -1271,7 +1279,7 @@
     [[%atom %number %.n] +.tokens]
   ::    Match on loobean type  a:?
   ?:  (has-punctuator -.tokens %'?')
-    [[%atom %loobean %.n] +.tokens]
+    [[%atom %logical %.n] +.tokens]
   ::  Match on noun type  a:*
   ?:  (has-punctuator -.tokens %'*')
     [[%none ~] +.tokens]
@@ -1409,9 +1417,9 @@
   ?:  =(~ tokens)  ~|("expect literal. token: ~" !!)
   ?.  ?=(%literal -<.tokens)
     ~|("expect literal. token: {<-<.tokens>}" !!)
-  ?:  ?=(%noun -<.tokens)
-    [[%noun -<.tokens] +.tokens]
-  [[%atom ->.tokens] +.tokens]
+  ?:  ?=(%noun ->-.tokens)
+    [[%noun ->+.tokens] +.tokens]
+  [[%atom ->+.tokens] +.tokens]
 ::
 ++  match-name
   |=  =tokens
@@ -1467,7 +1475,9 @@
   ?:  =(~ tokens)  ~|("expect literal. token: ~" !!)
   ?.  ?=(%literal -<.tokens)
     ~|("expect literal or symbol. token: {<-<.tokens>}" !!)
-  =/  p=jatom  ->.tokens
+  ?.  ?=(%atom ->-.tokens)
+    ~|("expect literal or symbol. token: {<-.tokens>}" !!)
+  =/  p=jatom  ->+.tokens
   ?.  ?=(%number -<.p)
     ~|("expect number or symbol. token: {<-.p>}" !!)
   ->.p
@@ -1983,7 +1993,7 @@
         %cell-check
       ~|  %cell-check
       =^  val  jyp  $(j val.j)
-      [[%3 val] [%atom %loobean %.n]^%$]
+      [[%3 val] [%atom %logical %.n]^%$]
     ::
         %compose
       ~|  %compose-p
@@ -2340,7 +2350,7 @@
       ==
     ::
         %compare
-      :_  [%atom %loobean %.n]^%$
+      :_  [%atom %logical %.n]^%$
       ?-    comp.j
           %'=='
         =+  [a a-jyp]=$(j a.j)
@@ -2665,7 +2675,7 @@
             %string       %ta
             %number       %ud
             %hexadecimal  %ux
-            %loobean      %f
+            %logical      %f
           ==
         p.p.arg
       ::
@@ -2727,7 +2737,7 @@
           %t    %string
           %ta   %string
           %tas  %string
-          %f    %loobean
+          %f    %logical
         ==
       =(~ q.t)
     ::
@@ -2819,7 +2829,7 @@
         %atom
       %-  crip
       ?-    ->-.jype
-        %loobean
+        %logical
       "{<;;(? +.nock)>}"
       ::
         %number
