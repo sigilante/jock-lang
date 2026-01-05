@@ -30,14 +30,14 @@
       |=  txt=@
       ^-  *
       =/  jok  (jeam (cat 3 'import hoon;\0a' txt))
-      =+  [nok jyp]=(~(mint cj:~(. +> libs) [%atom %string %.n]^%$) jok)
+      =+  [nok jyp]=(~(mint cj:~(. +> libs) [%atom %chars %.n]^%$) jok)
       nok
     ::
     ++  jypist
       |=  txt=@
       ^-  jype
       =/  jok  (jeam (cat 3 'import hoon;\0a' txt))
-      =+  [nok jyp]=(~(mint cj:~(. +> libs) [%atom %string %.n]^%$) jok)
+      =+  [nok jyp]=(~(mint cj:~(. +> libs) [%atom %chars %.n]^%$) jok)
       jyp
     --
 =>
@@ -113,7 +113,7 @@
 +$  jnoun
   $+  jnoun
   $%  [%string p=tape]
-          [%path p=path]
+      [%path p=path]
   ==
 ::
 +$  token
@@ -544,7 +544,6 @@
       %logical
       %date
       %span
-      %path
   ==
 ::  Jype noun base types; corresponds to jnoun tags
 +$  jnoun-type
@@ -1857,7 +1856,7 @@
   ++  mint
     |=  j=jock
     ^-  [nock jype]
-    ?-    -.j
+    ?+    -.j  ~|("cj: unimplmented jock: {<-.j>}" !!)
         ^
       ~|  %pair-p
       =+  [p p-jyp]=$(j p.j)
@@ -2631,6 +2630,8 @@
     ::
         %fork      $(j p.p.j)
     ::
+        %noun      [%1 0]
+    ::
         %list      [%1 0]
     ::
         %set       [%1 0]
@@ -2672,10 +2673,17 @@
         ;;  hoon
         :+  ?:(q.p.arg %rock %sand)
           ?-  -<.p.arg
-            %string       %ta
+            %chars        %ta
             %number       %ud
-            %hexadecimal  %ux
+            %sint         %sd
+            %hex          %ux
+            %real         %rd
+            %real16       %rh
+            %real32       %rs
+            %real128      %rq
             %logical      %f
+            %date         %da
+            %span         %dr
           ==
         p.p.arg
       ::
@@ -2685,10 +2693,35 @@
         ~|  %limb
         ~
       ::
+          %noun
+        ::  What we call nouns are specific types.
+        ::  [%noun p=jnoun]
+        ?-    -.p.arg
+          ::  a string is simply a tape, (list @tD)
+            %string
+          ~|  %string
+          ;;  (list hoon)
+          :_  ~
+          :-  %knit
+          ^-  *
+          p.p.arg
+          ::  a path is a (list @t)
+            %path
+          ~|  %path
+          :_  ~
+          :-  %clsg
+          %+  turn
+            p.p.arg
+          |=  =cord
+          ^-  hoon
+          [%sand %t cord]
+        ==
+      ::
           %list
         ::  Lists are composed of a series of values, which we unpack.
         ::  [%list type=jype-leaf val=(list jock)]
         ~|  %list
+        ;;  (list hoon)
         :_  ~
         :-  %clsg
         %-  snip  :: spurious ~ from Jock representation
@@ -2732,12 +2765,20 @@
       ^-  jype-leaf
       :+  %atom
         ?+  p.t  ~|("cannot convert atom type {<p.t>} to jatom" !!)
+          %t    %chars
+          %ta   %chars
+          %tas  %chars
           %ud   %number
-          %ux   %hexadecimal
-          %t    %string
-          %ta   %string
-          %tas  %string
+          %sd   %sint
+          %ux   %hex
+          %x    %hex
+          %rd   %real
+          %rh   %real16
+          %rs   %real32
+          %rq   %real128
           %f    %logical
+          %da   %date
+          %dr   %span
         ==
       =(~ q.t)
     ::
@@ -2828,17 +2869,17 @@
     ::
         %atom
       %-  crip
-      ?-    ->-.jype
+      ?+    ->-.jype  "{<(* +.nock)>}"
         %logical
       "{<;;(? +.nock)>}"
       ::
         %number
       "{<;;(@ud +.nock)>}"
       ::
-        %hexadecimal
+        %hex
       "{<;;(@ux +.nock)>}"
       ::
-        %string
+        %chars
       "{<;;(@t +.nock)>}"
       ::
       ==
