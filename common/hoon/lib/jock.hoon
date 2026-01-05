@@ -191,6 +191,7 @@
         %compose  %loop  %defer
         %recur  %match  %switch  %eval  %with  %this
         %import  %as  %print
+        :: %for
     ==
   ::
   ++  tagged-symbol
@@ -224,14 +225,14 @@
   ++  number
     %+  stag  %number
     dem
-  ::  Signed numeric literal: -1234, +1_234 -> @sd
+  ::  Signed numeric literal: -1234, +1234 -> @sd
   ++  sint
     %+  stag  %sint
     ;~  pose
         (cook |=(n=@ud (new:si & n)) ;~(pfix lus dem:ag))
         (cook |=(n=@ud (new:si | n)) ;~(pfix hep dem:ag))
     ==
-    :: TODO switch to dep when fixed
+    :: TODO switch to dep when fixed for +1_234_678 support
   ::  Hexadecimal literal: 0xBA1A3F, 0xba1a3f -> @x
   ++  hex
     %+  stag  %hex
@@ -408,7 +409,7 @@
       :: [%impl]
       :: [%trait]
       :: [%union]
-      :: [%alias]
+      [%alias name=cord target=cord]
       [%class state=jype arms=(map term jock)]
       [%method type=jype body=jock]
       ::
@@ -622,7 +623,7 @@
   ^-  [jock (list token)]
   ?:  =(~ tokens)  ~|("expect inner-jock. token: ~" !!)
   ?:  ?|  (has-keyword -.tokens %object)
-          :: (has-keyword -.tokens %class)
+          (has-keyword -.tokens %alias)
           (has-keyword -.tokens %with)
           (has-keyword -.tokens %this)
           (has-keyword -.tokens %crash)
@@ -1031,6 +1032,17 @@
     :: %')' consumed by +match-pair-inner-jock
     [[%call [%lambda lambda] `arg] tokens]
   ::
+  ::  [%alias name=term target=term]
+      %alias
+    =/  name=cord
+      (got-name -.tokens)
+    =.  tokens  +.tokens
+    =/  target=cord
+      (got-name -.tokens)
+    =.  tokens  +.tokens
+    =-  ~&(- -)
+    [[%alias name target] tokens]
+  ::
   ::  [%class state=jype arms=(map term jock)]
     ::   %class
     :: =^  state  tokens
@@ -1143,8 +1155,8 @@
     :_  tokens
     [%compose p q]
   ::
-      %match
   :: [%match value=jock cases=(map jock jock) default=(unit jock)]
+      %match
     =^  value  tokens
       (match-inner-jock tokens)
     =^  pairs  tokens
@@ -1152,8 +1164,8 @@
     :_  tokens
     [%match value -.pairs +.pairs]
   ::
-      %switch
   :: [%cases value=jock cases=(map jock jock) default=(unit jock)]
+      %switch
     =^  value  tokens
       (match-inner-jock tokens)
     =^  pairs  tokens
@@ -1931,6 +1943,11 @@
         ~|  ['have:' val-jyp 'need:' type.j]
         !!
       [val val-jyp]
+    ::
+        %alias
+      ::  Look up the type being aliased in the current subject.
+      ~&  "alias not implemented yet"
+      ~|("cj: unimplemented alias: {<j>}" !!)
     ::
         %class
       ~|  %class
