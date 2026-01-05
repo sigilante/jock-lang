@@ -1856,7 +1856,7 @@
   ++  mint
     |=  j=jock
     ^-  [nock jype]
-    ?+    -.j  ~|("cj: unimplmented jock: {<-.j>}" !!)
+    ?-    -.j  ::~|("cj: unimplemented jock: {<-.j>}" !!)
         ^
       ~|  %pair-p
       =+  [p p-jyp]=$(j p.j)
@@ -2542,9 +2542,16 @@
       ==
     ::
         %atom
+      ::  [%atom [type value] flag]
       ~|  [%atom +<+.j]
       :-  [%1 +<+.j]
       [^-(jype-leaf [%atom +<-.j +>.j]) %$]
+    ::
+        %noun
+      ::  [%noun [type value]]
+      ~|  [%noun +>.j]
+      :-  [%1 +>.j]
+      [^-(jype-leaf [%noun +<.j]) %$]
     ::
         %import
       ~|  %import
@@ -2708,6 +2715,7 @@
           ::  a path is a (list @t)
             %path
           ~|  %path
+          ~&  "here in path"
           :_  ~
           :-  %clsg
           %+  turn
@@ -2820,7 +2828,7 @@
         ~|((crip "hunt: can't match {<`@tas`-<.jype>}") !!)
       ::
         %atom
-      ?>  +.+.-.jype
+      ?>  ->+.jype  ::+.+.-.jype
       [%5 [%1 q.p.jype] %0 axis]
       ::
         %fork
