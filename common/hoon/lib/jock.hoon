@@ -405,7 +405,8 @@
       [%edit limb=(list jlimb) val=jock next=jock]
       [%func type=jype body=jock next=jock]
       [%lambda p=lambda]
-      :: [%struct]
+      ::  struct definition: struct Point { x: Real, y: Real }
+      [%struct name=cord fields=(list [name=term type=jype]) next=jock]
       :: [%impl]
       :: [%trait]
       :: [%union]
@@ -522,6 +523,8 @@
       [%hoon p=truncated-vase]
       ::  %state is a container for class state
       [%state p=jype]
+      ::  %struct is a product type with named fields
+      [%struct name=cord fields=(list [name=term type=jype])]
       ::  %none is a null type (as for undetermined variable labels)
       [%none p=(unit term)]
   ==
@@ -1043,6 +1046,43 @@
     =-  ~&(- -)
     [[%alias name target] tokens]
   ::
+  ::  struct Point { x: Real, y: Real };
+  ::  [%struct name=cord fields=(list [name=term type=jype]) next=jock]
+      %struct
+    ::  Get struct name (must be a Type starting with uppercase)
+    =/  name=cord
+      ~|  'struct: expected type name'
+      (got-type -.tokens)
+    =.  tokens  +.tokens
+    ::  Expect opening brace
+    ?>  (got-punctuator -.tokens %'{')
+    =.  tokens  +.tokens
+    ::  Parse fields: name: Type pairs
+    =|  fields=(list [name=term type=jype])
+    =^  fields  tokens
+      |-
+      ?:  (has-punctuator -.tokens %'}')
+        [(flop fields) +.tokens]
+      ::  Get field name
+      =/  field-name=term
+        (got-name -.tokens)
+      =.  tokens  +.tokens
+      ::  Expect colon
+      ?>  (got-punctuator -.tokens %':')
+      =.  tokens  +.tokens
+      ::  Get field type
+      =^  field-type=jype  tokens
+        (match-jype tokens)
+      ::  Skip optional comma
+      =?  tokens  (has-punctuator -.tokens %',')
+        +.tokens
+      $(fields [[field-name field-type] fields])
+    ::  Expect semicolon after struct definition
+    ?>  (got-punctuator -.tokens %';')
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%struct name fields next] tokens]
+  ::
   ::  [%class state=jype arms=(map term jock)]
     ::   %class
     :: =^  state  tokens
@@ -1500,6 +1540,13 @@
     ~|("expect name. token: {<-.token>}" !!)
   ;;(cord +.token)
 ::
+++  got-type
+  |=  =token
+  ^-  cord
+  ?.  ?=(%type -.token)
+    ~|("expect type name (starting with uppercase). token: {<-.token>}" !!)
+  ;;(cord +.token)
+::
 ++  get-name
   |=  =token
   ^-  (unit cord)
@@ -1943,6 +1990,48 @@
         ~|  ['have:' val-jyp 'need:' type.j]
         !!
       [val val-jyp]
+    ::
+    ::  struct Point { x: Real, y: Real };
+    ::  A struct definition adds a type to the environment and continues.
+    ::  The struct type is used when constructing instances: Point(1.0, 2.0)
+        %struct
+      ~|  %struct
+      ::  Build the struct type
+      =/  struct-type=jype
+        [[%struct name.j fields.j] name.j]
+      ::  Add struct type to environment with constructor
+      ::  The constructor is a gate that takes field values and returns a cell
+      =/  struct-jyp=jype
+        ::  Constructor type: gate from fields -> struct instance
+        =/  inp-type=jype
+          ?~  fields.j
+            [[%none ~] %$]
+          ?:  =((lent fields.j) 1)
+            type:(snag 0 fields.j)
+          =/  flds=(list [name=term type=jype])  fields.j
+          =/  first=jype  type.i.flds
+          =.  flds  t.flds
+          |-
+          ?~  flds  first
+          [[first $(first type.i.flds, flds t.flds)] %$]
+        [[%core [%& [`inp-type struct-type]] ~] name.j]
+      ::  Add the struct constructor to the environment
+      =.  jyp  (~(cons jt struct-jyp) jyp)
+      ::  Compile next expression with struct type available
+      =+  [nex nex-jyp]=$(j next.j)
+      ::  Generate constructor Nock: gate that builds a cell from args
+      ::  [%8 sample [%1 [%0 6]] [%0 1]] for single field
+      ::  [%8 sample [%1 [%0 6]] [%0 1]] with nested cells for multiple fields
+      =/  constructor-nock=nock
+        ?~  fields.j
+          ::  empty struct (unit-like)
+          [%8 [%1 0] [%1 [%0 6]] [%0 1]]
+        ?:  =((lent fields.j) 1)
+          ::  single field: just pass through
+          [%8 [%1 0] [%1 [%0 6]] [%0 1]]
+        ::  multiple fields: already a cell, pass through
+        [%8 [%1 0] [%1 [%0 6]] [%0 1]]
+      [[%8 [%1 constructor-nock] nex] nex-jyp]
     ::
         %alias
       ::  Look up the type being aliased in the current subject.
