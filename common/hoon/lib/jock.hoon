@@ -1981,8 +1981,9 @@
     ::
         %struct
       ~|  %struct
-      ~&  "struct not implemented yet"
-      ~|("cj: unimplemented struct: {<j>}" !!)
+      =/  jyp=jype  [[%struct name.j fields.j] name.j]
+      =/  val=nock  (type-to-default jyp)
+      [val jyp]
     ::
         %class
       ~|  %class
