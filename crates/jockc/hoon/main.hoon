@@ -42,7 +42,7 @@
   =/  args  (turn args.cau (cury scot %ud))
   =/  code  (preprocess text.cau args)
   =/  libs  `(map term cord)`(malt libs-list.cau)
-  ~&  libs+[~(tap by libs)]
+  ~&  libs+(turn ~(tap by libs) |=([k=term v=cord] k))
   ~&  code+[code]
   ~&  parse+(parse:~(. runner libs) code)
   ~&  jeam+(jeam:~(. runner libs) code)

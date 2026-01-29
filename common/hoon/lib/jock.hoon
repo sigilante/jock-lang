@@ -630,6 +630,7 @@
   ?:  =(~ tokens)  ~|("expect inner-jock. token: ~" !!)
   ?:  ?|  (has-keyword -.tokens %object)
           (has-keyword -.tokens %alias)
+          (has-keyword -.tokens %struct)
           (has-keyword -.tokens %with)
           (has-keyword -.tokens %this)
           (has-keyword -.tokens %crash)
@@ -1073,8 +1074,7 @@
       =?  tokens  (has-punctuator -.tokens %',')
         +.tokens
       $(fields [[field-name field-type] fields])
-    ?>  (got-punctuator -.tokens %';')
-    [[%struct name fields] +.tokens]
+    [[%struct name fields] tokens]
   ::
   ::  [%class state=jype arms=(map term jock)]
     ::   %class
@@ -1760,6 +1760,8 @@
         `jyp(name %$)
       ?@  -<.jyp
         ?:  =(~ t.axi-lis)  `jyp
+        ?:  ?=(%struct -.p.jyp)
+          $(jyp (struct-to-jype fields.p.jyp))
         ?.  ?=(%core -.p.jyp)
           ~|  jyp
           !!
@@ -1779,6 +1781,8 @@
           `+.axi
         `axi
       ?@  -<.jyp
+        ?:  ?=(%struct -.p.jyp)
+          $(jyp (struct-to-jype fields.p.jyp))
         ?.  ?=(%core -.p.jyp)
           ~
         ?:  ?=(%& -.p.p.jyp)
@@ -1805,6 +1809,15 @@
           $(jyp q.jyp, -.axi +((mul -.axi 2)))
         r
       l
+    ::
+    ::  Expand struct fields into a virtual cell jype for axis resolution.
+    ++  struct-to-jype
+      |=  flds=(list [name=term type=jype])
+      ^-  jype
+      ?~  flds  [[%none ~] %$]
+      =/  this=jype  type.i.flds(name name.i.flds)
+      ?~  t.flds  this
+      [[this $(flds t.flds)] %$]
     --
   ::
   ++  find-buc
@@ -1981,9 +1994,9 @@
     ::
         %struct
       ~|  %struct
-      =/  jyp=jype  [[%struct name.j fields.j] name.j]
-      =/  val=nock  (type-to-default jyp)
-      [val jyp]
+      =/  struct-jyp=jype  [[%struct name.j fields.j] name.j]
+      =/  val=nock  (type-to-default struct-jyp)
+      [val struct-jyp]
     ::
         %class
       ~|  %class
