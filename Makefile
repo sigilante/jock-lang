@@ -84,7 +84,7 @@ assets: ## Create the assets directory
 	@mkdir -p assets
 
 assets/jockc.jam: assets $(JOCKC_HOON_SOURCES)
-	RUST_LOG=trace MINIMAL_LOG_FORMAT=true $(HOONC) crates/jockc/hoon/main.hoon crates/jockc/hoon
+	RUST_LOG=trace,gnort=off MINIMAL_LOG_FORMAT=true $(HOONC) crates/jockc/hoon/main.hoon crates/jockc/hoon
 	mv out.jam assets/jockc.jam
 
 assets/jockt.jam: assets $(JOCKT_HOON_SOURCES)

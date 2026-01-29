@@ -405,7 +405,7 @@
       [%edit limb=(list jlimb) val=jock next=jock]
       [%func type=jype body=jock next=jock]
       [%lambda p=lambda]
-      [%struct name=cord fields=(list [name=term type=jype]) next=jock]
+      [%struct name=cord fields=(list [name=term type=jype])]
       :: [%impl]
       :: [%trait]
       :: [%union]
@@ -523,10 +523,14 @@
       ::  %state is a container for class state
       [%state p=jype]
       ::  %struct is a product type with named fields
-      [%struct name=cord fields=(list [name=term type=jype])]
+      [%struct name=cord fields=struct-fields]
       ::  %none is a null type (as for undetermined variable labels)
       [%none p=(unit term)]
   ==
+::
++$  struct-fields
+  $+  struct-fields
+  (list [name=term type=jype])
 ::
 +$  truncated-vase
   $+  truncated-vase
@@ -1045,6 +1049,33 @@
     =-  ~&(- -)
     [[%alias name target] tokens]
   ::
+  ::  struct Point { x: Real, y: Real };
+  ::  [%struct name=cord fields=(list [name=term type=jype])]
+      %struct
+    =/  name=cord
+      ~|  'struct: expected type name'
+      (got-type -.tokens)
+    =.  tokens  +.tokens
+    ?>  (got-punctuator -.tokens %'{')
+    =.  tokens  +.tokens
+    =|  fields=(list [name=term type=jype])
+    =^  fields  tokens
+      |-
+      ?:  (has-punctuator -.tokens %'}')
+        [(flop fields) +.tokens]
+      =/  field-name=term
+        (got-name -.tokens)
+      =.  tokens  +.tokens
+      ?>  (got-punctuator -.tokens %':')
+      =.  tokens  +.tokens
+      =^  field-type=jype  tokens
+        (match-jype tokens)
+      =?  tokens  (has-punctuator -.tokens %',')
+        +.tokens
+      $(fields [[field-name field-type] fields])
+    ?>  (got-punctuator -.tokens %';')
+    [[%struct name fields] +.tokens]
+  ::
   ::  [%class state=jype arms=(map term jock)]
     ::   %class
     :: =^  state  tokens
@@ -1495,6 +1526,13 @@
     ~|("expect number or symbol. token: {<-.p>}" !!)
   ->.p
 ::
+++  got-type
+  |=  =token
+  ^-  cord
+  ?.  ?=(%type -.token)
+    ~|("expect type name (starting with uppercase). token: {<-.token>}" !!)
+  ;;(cord +.token)
+::
 ++  got-name
   |=  =token
   ^-  cord
@@ -1533,16 +1571,6 @@
     ~|("expect punctuator. token: {<-.token>}" !!)
   ?.  =(+.token punc)
     ~|("expect punctuator {<+.token>} to be {<punc>}" !!)
-  %.y
-::
-++  got-type
-  |=  [=token type=cord]
-  ^-  ?
-  ?:  =(~ tokens)  ~|("expect type. token: ~" !!)
-  ?.  ?=(%type -<.tokens)
-    ~|("expect type. token: {<token>}" !!)
-  ?.  =(+.token type)
-    ~|("expect type {<+.token>} to be {<type>}" !!)
   %.y
 ::
 ++  has-punctuator
@@ -1950,6 +1978,11 @@
       ::  Look up the type being aliased in the current subject.
       ~&  "alias not implemented yet"
       ~|("cj: unimplemented alias: {<j>}" !!)
+    ::
+        %struct
+      ~|  %struct
+      ~&  "struct not implemented yet"
+      ~|("cj: unimplemented struct: {<j>}" !!)
     ::
         %class
       ~|  %class
@@ -2665,6 +2698,8 @@
         %hoon      [%1 0]
     ::
         %state     $(j p.p.j)
+    ::
+        %struct    [%1 0]
     ::
         %none      [%1 0]
     ==
