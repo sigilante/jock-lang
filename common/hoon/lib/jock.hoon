@@ -737,9 +737,8 @@
     (match-jype tokens)
   =^  inp=jype  tokens
     (match-block [tokens %'((' %')'] match-jype)
-  ?>  (got-punctuator -.tokens %'-')
-  ?>  (got-punctuator +<.tokens %'>')
-  =.  tokens  +>.tokens
+  ?>  (got-punctuator -.tokens %'->')
+  =.  tokens  +.tokens
   =^  out=jype  tokens
     (match-jype tokens)
   ?>  (got-punctuator -.tokens %';')
@@ -1027,9 +1026,8 @@
       (match-jype tokens)
     =^  inp  tokens
       (match-block [tokens %'((' %')'] match-jype)
-    ?>  (got-punctuator -.tokens %'-')
-    ?>  (got-punctuator +<.tokens %'>')
-    =.  tokens  +>.tokens
+    ?>  (got-punctuator -.tokens %'->')
+    =.  tokens  +.tokens
     =^  out  tokens
       (match-jype tokens)
     =^  body  tokens
@@ -1391,10 +1389,9 @@
   ^-  [lambda-argument (list token)]
   =^  inp  tokens
     (match-block [tokens %'(' %')'] match-jype)
-  ?>  (got-punctuator -.tokens %'-')
-  ?>  (got-punctuator +<.tokens %'>')
+  ?>  (got-punctuator -.tokens %'->')
   =^  out  tokens
-    (match-jype +>.tokens)
+    (match-jype +.tokens)
   [[`inp out] tokens]
 ::
 ++  match-comparator
@@ -1516,9 +1513,8 @@
     :: default case, must be last
     ?:  (has-punctuator -.tokens %'_')
       ::  TODO later put these as operators in regular operator handling code
-      ?>  (got-punctuator +<.tokens %'-')
-      ?>  (got-punctuator +>-.tokens %'>')
-      =^  jock  tokens  `[jock (list token)]`(match-jock `(list token)`+>+.tokens)
+      ?>  (got-punctuator +<.tokens %'->')
+      =^  jock  tokens  `[jock (list token)]`(match-jock `(list token)`+>.tokens)
       ?>  (got-punctuator -.tokens %';')
       =.  tokens  +.tokens
       ?>  (got-punctuator -.tokens %'}')  :: no trailing tokens in case block
@@ -1526,9 +1522,8 @@
       [[(malt duo) fall] tokens]
     :: regular case
     =^  jock-1  tokens  (match-jock tokens)
-    ?>  (got-punctuator -.tokens %'-')
-    ?>  (got-punctuator +<.tokens %'>')
-    =^  jock-2  tokens  (match-jock +>.tokens)
+    ?>  (got-punctuator -.tokens %'->')
+    =^  jock-2  tokens  (match-jock +.tokens)
     ?>  (got-punctuator -.tokens %';')
     =.  tokens  +.tokens
     $(duo [[jock-1 jock-2] duo])
@@ -1868,8 +1863,9 @@
     ?:  ?=(%& -.p)
       ~|  %call-lambda
       =/  out-type
-        ::  TODO: need to put the return type here, with all names stripped
-        out.p.p
+        ::  Strip name from return type to prevent scope pollution
+        ::  when axis-at-name searches through core expansions.
+        out.p.p(name %$)
       ?~  inp.p.p
         ?~  q
           [out-type untyped-j]^%$
@@ -1995,7 +1991,9 @@
           ~|  '%func: value type does not nest in declared type'
           ~|  ['have:' val-jyp 'need:' type.j]
           !!
-        (~(cons jt u.inferred-type) jyp)
+        ::  Use the resolved type (val-jyp) with declared name,
+        ::  so %limb references are resolved before storing in subject.
+        (~(cons jt val-jyp(name name.type.j)) jyp)
       ~|  %func-next
       =+  [nex nex-jyp]=$(j next.j)
       [[%8 val nex] nex-jyp]
@@ -2570,37 +2568,29 @@
       =/  con=(unit (pair nock jype))
         ?~  context.p.j  ~
         `$(j u.context.p.j)
+      ::  Resolve %limb references in lambda argument types eagerly
+      ::  so struct fields are accessible inside function bodies.
+      =.  u.inp.arg.p.j
+        ?.  ?&(?=(@ -<.u.inp.arg.p.j) ?=(%limb -.p.u.inp.arg.p.j))
+          u.inp.arg.p.j
+        =/  lim  (~(get-limb jt jyp) p.p.u.inp.arg.p.j)
+        ?~  lim  u.inp.arg.p.j
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim(name name.u.inp.arg.p.j)
+      =.  out.arg.p.j
+        ?.  ?&(?=(@ -<.out.arg.p.j) ?=(%limb -.p.out.arg.p.j))
+          out.arg.p.j
+        =/  lim  (~(get-limb jt jyp) p.p.out.arg.p.j)
+        ?~  lim  out.arg.p.j
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim(name name.out.arg.p.j)
       =/  input-default  (type-to-default u.inp.arg.p.j)
       ~|  %enter-lambda-body
-      ::  TODO: wtf?
       =/  lam-jyp  (lam-j arg.p.j ?~(con `jyp `q.u.con))
       ::  1. Get body jype
       =+  [body body-jyp]=$(j body.p.j, jyp lam-jyp)
-      ?:  (is-type name.out.arg.p.j)
-        ::  instance return from method
-        ?~  con
-          :_  (lam-j arg.p.j `jyp)
-          :+  %8
-            input-default
-          :-
-            :-  %1
-            :+  %8
-              [%0 7]
-            :+  %10
-              [6 %7 [%0 3] body]
-            [%0 2]
-          [%0 1]
-        :_  (lam-j arg.p.j `q.u.con)
-        :+  %8
-          input-default
-        :-
-          :-  %1
-          :+  %8
-            [%0 7]
-          :+  %10
-            [6 %7 [%0 3] body]
-          [%0 2]
-        p.u.con
+      ::  TODO: method return path (instance return via Nock 10) removed;
+      ::  re-add when class methods are implemented.
       ::  normal return
       ?~  con
         :_  (lam-j arg.p.j `jyp)

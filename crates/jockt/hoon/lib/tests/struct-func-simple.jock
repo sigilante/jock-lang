@@ -1,0 +1,8 @@
+compose
+  struct Point { x: Real, y: Real }
+;
+func identity(p: Point) -> Point {
+  p
+};
+let pt = Point { x: 42, y: 7 };
+identity(pt)

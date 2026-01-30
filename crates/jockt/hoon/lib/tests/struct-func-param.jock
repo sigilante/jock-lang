@@ -1,0 +1,8 @@
+compose
+  struct Point { x: Real, y: Real }
+;
+func getx(p: Point) -> Real {
+  p.x
+};
+let pt = Point { x: 42, y: 7 };
+getx(pt)
