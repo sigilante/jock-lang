@@ -1,0 +1,11 @@
+compose
+  struct Point { x: Real, y: Real }
+;
+compose
+  alias Pos Point
+;
+compose
+  alias Vec Pos
+;
+let p = Vec { x: 42, y: 7 };
+p.x

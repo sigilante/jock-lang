@@ -2012,8 +2012,33 @@
     ::
         %alias
       ::  Look up the type being aliased in the current subject.
-      ~&  "alias not implemented yet"
-      ~|("cj: unimplemented alias: {<j>}" !!)
+      ::  Resolve target type at definition time, then create a
+      ::  new entry with the alias name pointing to the same type.
+      ~|  %alias
+      ::  First try built-in types, then fall back to subject lookup.
+      =/  target-jyp=jype
+        ?:  =('Atom' target.j)     [%atom %number %.n]^target.j
+        ?:  =('Uint' target.j)     [%atom %number %.n]^target.j
+        ?:  =('Int' target.j)      [%atom %sint %.n]^target.j
+        ?:  =('Hex' target.j)      [%atom %hex %.n]^target.j
+        ?:  =('Real' target.j)     [%atom %real %.n]^target.j
+        ?:  =('Real16' target.j)   [%atom %real16 %.n]^target.j
+        ?:  =('Real32' target.j)   [%atom %real32 %.n]^target.j
+        ?:  =('Real128' target.j)  [%atom %real128 %.n]^target.j
+        ?:  =('Logical' target.j)  [%atom %logical %.n]^target.j
+        ?:  =('Date' target.j)     [%atom %date %.n]^target.j
+        ?:  =('Span' target.j)     [%atom %span %.n]^target.j
+        ?:  =('String' target.j)   [%noun %string]^target.j
+        ?:  =('Path' target.j)     [%noun %path]^target.j
+        ::  Not a built-in; look up in subject
+        =/  lim  (~(get-limb jt jyp) ~[[%type target.j]])
+        ?~  lim  ~|('alias target not found: {<target.j>}' !!)
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim
+      ::  Create alias jype: same type structure but with alias name
+      =/  alias-jyp=jype  target-jyp(name name.j)
+      =/  val=nock  (type-to-default target-jyp)
+      [val alias-jyp]
     ::
         %struct
       ~|  %struct
