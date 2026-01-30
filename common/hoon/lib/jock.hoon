@@ -737,9 +737,8 @@
     (match-jype tokens)
   =^  inp=jype  tokens
     (match-block [tokens %'((' %')'] match-jype)
-  ?>  (got-punctuator -.tokens %'-')
-  ?>  (got-punctuator +<.tokens %'>')
-  =.  tokens  +>.tokens
+  ?>  (got-punctuator -.tokens %'->')
+  =.  tokens  +.tokens
   =^  out=jype  tokens
     (match-jype tokens)
   ?>  (got-punctuator -.tokens %';')
@@ -1027,9 +1026,8 @@
       (match-jype tokens)
     =^  inp  tokens
       (match-block [tokens %'((' %')'] match-jype)
-    ?>  (got-punctuator -.tokens %'-')
-    ?>  (got-punctuator +<.tokens %'>')
-    =.  tokens  +>.tokens
+    ?>  (got-punctuator -.tokens %'->')
+    =.  tokens  +.tokens
     =^  out  tokens
       (match-jype tokens)
     =^  body  tokens
@@ -1391,10 +1389,9 @@
   ^-  [lambda-argument (list token)]
   =^  inp  tokens
     (match-block [tokens %'(' %')'] match-jype)
-  ?>  (got-punctuator -.tokens %'-')
-  ?>  (got-punctuator +<.tokens %'>')
+  ?>  (got-punctuator -.tokens %'->')
   =^  out  tokens
-    (match-jype +>.tokens)
+    (match-jype +.tokens)
   [[`inp out] tokens]
 ::
 ++  match-comparator
@@ -1516,9 +1513,8 @@
     :: default case, must be last
     ?:  (has-punctuator -.tokens %'_')
       ::  TODO later put these as operators in regular operator handling code
-      ?>  (got-punctuator +<.tokens %'-')
-      ?>  (got-punctuator +>-.tokens %'>')
-      =^  jock  tokens  `[jock (list token)]`(match-jock `(list token)`+>+.tokens)
+      ?>  (got-punctuator +<.tokens %'->')
+      =^  jock  tokens  `[jock (list token)]`(match-jock `(list token)`+>.tokens)
       ?>  (got-punctuator -.tokens %';')
       =.  tokens  +.tokens
       ?>  (got-punctuator -.tokens %'}')  :: no trailing tokens in case block
@@ -1526,9 +1522,8 @@
       [[(malt duo) fall] tokens]
     :: regular case
     =^  jock-1  tokens  (match-jock tokens)
-    ?>  (got-punctuator -.tokens %'-')
-    ?>  (got-punctuator +<.tokens %'>')
-    =^  jock-2  tokens  (match-jock +>.tokens)
+    ?>  (got-punctuator -.tokens %'->')
+    =^  jock-2  tokens  (match-jock +.tokens)
     ?>  (got-punctuator -.tokens %';')
     =.  tokens  +.tokens
     $(duo [[jock-1 jock-2] duo])
@@ -1868,8 +1863,9 @@
     ?:  ?=(%& -.p)
       ~|  %call-lambda
       =/  out-type
-        ::  TODO: need to put the return type here, with all names stripped
-        out.p.p
+        ::  Strip name from return type to prevent scope pollution
+        ::  when axis-at-name searches through core expansions.
+        out.p.p(name %$)
       ?~  inp.p.p
         ?~  q
           [out-type untyped-j]^%$
@@ -1995,7 +1991,9 @@
           ~|  '%func: value type does not nest in declared type'
           ~|  ['have:' val-jyp 'need:' type.j]
           !!
-        (~(cons jt u.inferred-type) jyp)
+        ::  Use the resolved type (val-jyp) with declared name,
+        ::  so %limb references are resolved before storing in subject.
+        (~(cons jt val-jyp(name name.type.j)) jyp)
       ~|  %func-next
       =+  [nex nex-jyp]=$(j next.j)
       [[%8 val nex] nex-jyp]
@@ -2012,14 +2010,57 @@
     ::
         %alias
       ::  Look up the type being aliased in the current subject.
-      ~&  "alias not implemented yet"
-      ~|("cj: unimplemented alias: {<j>}" !!)
+      ::  Resolve target type at definition time, then create a
+      ::  new entry with the alias name pointing to the same type.
+      ~|  %alias
+      ::  First try built-in types, then fall back to subject lookup.
+      =/  target-jyp=jype
+        ?:  =('Atom' target.j)     [%atom %number %.n]^target.j
+        ?:  =('Uint' target.j)     [%atom %number %.n]^target.j
+        ?:  =('Int' target.j)      [%atom %sint %.n]^target.j
+        ?:  =('Hex' target.j)      [%atom %hex %.n]^target.j
+        ?:  =('Real' target.j)     [%atom %real %.n]^target.j
+        ?:  =('Real16' target.j)   [%atom %real16 %.n]^target.j
+        ?:  =('Real32' target.j)   [%atom %real32 %.n]^target.j
+        ?:  =('Real128' target.j)  [%atom %real128 %.n]^target.j
+        ?:  =('Logical' target.j)  [%atom %logical %.n]^target.j
+        ?:  =('Date' target.j)     [%atom %date %.n]^target.j
+        ?:  =('Span' target.j)     [%atom %span %.n]^target.j
+        ?:  =('String' target.j)   [%noun %string]^target.j
+        ?:  =('Path' target.j)     [%noun %path]^target.j
+        ::  Not a built-in; look up in subject
+        =/  lim  (~(get-limb jt jyp) ~[[%type target.j]])
+        ?~  lim  ~|('alias target not found: {<target.j>}' !!)
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim
+      ::  Create alias jype: same type structure but with alias name
+      =/  alias-jyp=jype  target-jyp(name name.j)
+      =/  val=nock  (type-to-default target-jyp)
+      [val alias-jyp]
     ::
         %struct
       ~|  %struct
-      =/  struct-jyp=jype  [[%struct name.j fields.j] name.j]
+      ::  Resolve %limb references in field types eagerly
+      ::  so nested struct field access works.
+      =/  resolved-fields=(list [name=term type=jype])
+        =|  acc=(list [name=term type=jype])
+        =/  flds  fields.j
+        |-
+        ?~  flds  (flop acc)
+        =/  ftyp=jype  type.i.flds
+        =.  ftyp
+          ?.  ?&(?=(@ -<.ftyp) ?=(%limb -.p.ftyp))
+            ftyp
+          =/  lim  (~(get-limb jt jyp) p.p.ftyp)
+          ?~  lim  ftyp
+          ?>  ?=(%& -.u.lim)
+          p.p.u.lim(name name.ftyp)
+        $(flds t.flds, acc [[name.i.flds ftyp] acc])
+      =/  struct-jyp=jype  [[%struct name.j resolved-fields] name.j]
       =/  val=nock  (type-to-default struct-jyp)
-      [val struct-jyp]
+      ::  Push struct bunt onto subject (Nock 8) rather than replacing it,
+      ::  so previous type definitions remain accessible for nested structs.
+      [[%8 val [%0 1]] (~(cons jt struct-jyp) jyp)]
     ::
         %struct-literal
       ~|  %struct-literal
@@ -2545,37 +2586,29 @@
       =/  con=(unit (pair nock jype))
         ?~  context.p.j  ~
         `$(j u.context.p.j)
+      ::  Resolve %limb references in lambda argument types eagerly
+      ::  so struct fields are accessible inside function bodies.
+      =.  u.inp.arg.p.j
+        ?.  ?&(?=(@ -<.u.inp.arg.p.j) ?=(%limb -.p.u.inp.arg.p.j))
+          u.inp.arg.p.j
+        =/  lim  (~(get-limb jt jyp) p.p.u.inp.arg.p.j)
+        ?~  lim  u.inp.arg.p.j
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim(name name.u.inp.arg.p.j)
+      =.  out.arg.p.j
+        ?.  ?&(?=(@ -<.out.arg.p.j) ?=(%limb -.p.out.arg.p.j))
+          out.arg.p.j
+        =/  lim  (~(get-limb jt jyp) p.p.out.arg.p.j)
+        ?~  lim  out.arg.p.j
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim(name name.out.arg.p.j)
       =/  input-default  (type-to-default u.inp.arg.p.j)
       ~|  %enter-lambda-body
-      ::  TODO: wtf?
       =/  lam-jyp  (lam-j arg.p.j ?~(con `jyp `q.u.con))
       ::  1. Get body jype
       =+  [body body-jyp]=$(j body.p.j, jyp lam-jyp)
-      ?:  (is-type name.out.arg.p.j)
-        ::  instance return from method
-        ?~  con
-          :_  (lam-j arg.p.j `jyp)
-          :+  %8
-            input-default
-          :-
-            :-  %1
-            :+  %8
-              [%0 7]
-            :+  %10
-              [6 %7 [%0 3] body]
-            [%0 2]
-          [%0 1]
-        :_  (lam-j arg.p.j `q.u.con)
-        :+  %8
-          input-default
-        :-
-          :-  %1
-          :+  %8
-            [%0 7]
-          :+  %10
-            [6 %7 [%0 3] body]
-          [%0 2]
-        p.u.con
+      ::  TODO: method return path (instance return via Nock 10) removed;
+      ::  re-add when class methods are implemented.
       ::  normal return
       ?~  con
         :_  (lam-j arg.p.j `jyp)

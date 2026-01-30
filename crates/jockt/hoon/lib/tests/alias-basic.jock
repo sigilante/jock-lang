@@ -1,0 +1,5 @@
+compose
+  alias Number Real
+;
+let x:Number = 42;
+x
