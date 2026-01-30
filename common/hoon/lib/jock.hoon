@@ -406,6 +406,7 @@
       [%func type=jype body=jock next=jock]
       [%lambda p=lambda]
       [%struct name=cord fields=(list [name=term type=jype])]
+      [%struct-literal name=cord vals=(map term jock)]
       :: [%impl]
       :: [%trait]
       :: [%union]
@@ -879,11 +880,33 @@
   ?:  (has-punctuator -.tokens %';')
     [[%limb limbs] tokens]
   |-
+  ?:  =(~ tokens)
+    [[%limb limbs] tokens]
+  ::  - struct literal (Type { field: value, ... })
+  ?:  &((is-type name) (has-punctuator -.tokens %'{'))
+    =.  tokens  +.tokens
+    =|  vmap=(map term jock)
+    =^  vmap  tokens
+      |-
+      ?:  (has-punctuator -.tokens %'}')
+        [vmap +.tokens]
+      =/  field-name=term
+        (got-name -.tokens)
+      =.  tokens  +.tokens
+      ?>  (got-punctuator -.tokens %':')
+      =^  fval  tokens
+        (match-inner-jock +.tokens)
+      =?  tokens  (has-punctuator -.tokens %',')
+        +.tokens
+      $(vmap (~(put by vmap) field-name fval))
+    [[%struct-literal name vmap] tokens]
   ::  - %name (there is a wing with multiple entries)
   ?:  (has-punctuator -.tokens %'.')
     =^  limbs  tokens
       =/  acc=(list jlimb)  ~
       |-
+      ?:  =(~ tokens)
+        [(flop acc) tokens]
       ?.  (has-punctuator -.tokens %'.')
         [(flop acc) tokens]
       ?^  nom=(get-name +<.tokens)
@@ -1759,9 +1782,9 @@
       ?~  axi-lis
         `jyp(name %$)
       ?@  -<.jyp
-        ?:  =(~ t.axi-lis)  `jyp
         ?:  ?=(%struct -.p.jyp)
           $(jyp (struct-to-jype fields.p.jyp))
+        ?:  =(~ t.axi-lis)  `jyp
         ?.  ?=(%core -.p.jyp)
           ~|  jyp
           !!
@@ -1942,10 +1965,10 @@
             =/  lyp=jype  p.p.u.lim
             =/  ljw=(list jwing)  q.p.u.lim
             `[[%limb ~[[%type name.val-jyp]]] name.type.j]
-          ?:  (is-type name.val-jyp)
+          ?:  &((is-type name.val-jyp) !?=(%struct -<.val-jyp))
             :: case 4, let name = Type(value);
             :: [p=[%limb p=~[[%type p='Foo']]] name='name']
-            :: pass rval as Type after nesting check
+            :: pass rval as Type after nesting check (not for structs)
             ~|  %nesting-without-specified-lval-type
             ^-  (unit jype)
             `[[%limb ~[[%type name.val-jyp]]] name.type.j]
@@ -1997,6 +2020,33 @@
       =/  struct-jyp=jype  [[%struct name.j fields.j] name.j]
       =/  val=nock  (type-to-default struct-jyp)
       [val struct-jyp]
+    ::
+        %struct-literal
+      ~|  %struct-literal
+      =/  lim  (~(get-limb jt jyp) ~[[%type name.j]])
+      ?~  lim  ~|('struct not found' !!)
+      ?>  ?=(%& -.u.lim)
+      =/  styp=jype  p.p.u.lim
+      ?>  ?=(@ -<.styp)
+      ?>  ?=(%struct -.p.styp)
+      =/  flds=(list [name=term type=jype])  fields.p.styp
+      =/  struct-jyp=jype  [[%struct name.j flds] name.j]
+      ::  compile field values in definition order
+      =/  noks=(list nock)
+        =|  acc=(list nock)
+        |-
+        ?~  flds  (flop acc)
+        =/  hit=(unit jock)  (~(get by vals.j) name.i.flds)
+        =/  nok=nock
+          ?~  hit  (type-to-default type.i.flds)
+          -:^$(j u.hit)
+        $(flds t.flds, acc [nok acc])
+      ?~  noks  [[%1 0] struct-jyp]
+      :-
+        |-
+        ?~  t.noks  i.noks
+        [i.noks $(noks t.noks)]
+      struct-jyp
     ::
         %class
       ~|  %class
@@ -2713,7 +2763,12 @@
     ::
         %state     $(j p.p.j)
     ::
-        %struct    [%1 0]
+        %struct
+      =/  flds=(list [name=term type=jype])  fields.p.j
+      ?~  flds  [%1 0]
+      =/  this=nock  $(j type.i.flds)
+      ?~  t.flds  this
+      [this $(j [[%struct name.p.j t.flds] name.j])]
     ::
         %none      [%1 0]
     ==

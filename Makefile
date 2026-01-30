@@ -68,7 +68,9 @@ build: jockc jockt ## Build the Jock compiler and tester
 
 .PHONY: clean-jam
 clean-jam: ## Clean just the jam files to force Hoon recompilation
-	rm -rf assets/*.jam .data.hoonc/ ~/.nockapp/hoonc/
+	-find assets -name '*.jam' -delete 2>/dev/null; true
+	-command rm -rf .data.hoonc/ 2>/dev/null; true
+	-command rm -rf $(HOME)/.nockapp/hoonc/ 2>/dev/null; true
 
 .PHONY: clean
 clean: ## Clean all projects
