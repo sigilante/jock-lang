@@ -1,0 +1,4 @@
+compose
+  struct Point { x: Real, y: Real }
+;
+Point

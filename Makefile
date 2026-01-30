@@ -18,7 +18,7 @@ help:
 
 PROFILE_DEV_DEBUG = --profile dev
 PROFILE_RELEASE = --profile release
-HOONC = hoonc
+HOONC = ~/.cargo/bin/hoonc
 
 .PHONY: build
 build: build-dev-debug
@@ -66,6 +66,12 @@ release-test-all:
 .PHONY: build
 build: jockc jockt ## Build the Jock compiler and tester
 
+.PHONY: clean-jam
+clean-jam: ## Clean just the jam files to force Hoon recompilation
+	-find assets -name '*.jam' -delete 2>/dev/null; true
+	-command rm -rf .data.hoonc/ 2>/dev/null; true
+	-command rm -rf $(HOME)/.nockapp/hoonc/ 2>/dev/null; true
+
 .PHONY: clean
 clean: ## Clean all projects
 	@set -e; \
@@ -84,7 +90,7 @@ assets: ## Create the assets directory
 	@mkdir -p assets
 
 assets/jockc.jam: assets $(JOCKC_HOON_SOURCES)
-	RUST_LOG=trace MINIMAL_LOG_FORMAT=true $(HOONC) crates/jockc/hoon/main.hoon crates/jockc/hoon
+	RUST_LOG=trace,gnort=off MINIMAL_LOG_FORMAT=true $(HOONC) crates/jockc/hoon/main.hoon crates/jockc/hoon
 	mv out.jam assets/jockc.jam
 
 assets/jockt.jam: assets $(JOCKT_HOON_SOURCES)
