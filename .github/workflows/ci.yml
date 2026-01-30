@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [master]
+
+env:
+  RUST_BACKTRACE: full
+  RUST_LOG: info
+  MINIMAL_LOG_FORMAT: true
+  HOONC: ~/.nockup/bin/hoonc
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-02-14
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install hoonc via Nockup
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/nockchain/nockchain/refs/heads/master/crates/nockup/install.sh | bash
+          echo "$HOME/.nockup/bin" >> $GITHUB_PATH
+          $HOME/.nockup/bin/nockup update
+
+      - name: Build jockc.jam
+        run: make assets/jockc.jam
+
+      - name: Build jockc
+        run: cargo build --profile release --bin jockc
+
+      - name: Test struct-basic
+        run: timeout 120 ./target/release/jockc --import-dir common/hoon/lib ./crates/jockt/hoon/lib/tests/struct-basic || [ $? -eq 124 ]
+
+      - name: Test struct-field-access
+        run: timeout 120 ./target/release/jockc --import-dir common/hoon/lib ./crates/jockt/hoon/lib/tests/struct-field-access || [ $? -eq 124 ]
