@@ -2040,9 +2040,27 @@
     ::
         %struct
       ~|  %struct
-      =/  struct-jyp=jype  [[%struct name.j fields.j] name.j]
+      ::  Resolve %limb references in field types eagerly
+      ::  so nested struct field access works.
+      =/  resolved-fields=(list [name=term type=jype])
+        =|  acc=(list [name=term type=jype])
+        =/  flds  fields.j
+        |-
+        ?~  flds  (flop acc)
+        =/  ftyp=jype  type.i.flds
+        =.  ftyp
+          ?.  ?&(?=(@ -<.ftyp) ?=(%limb -.p.ftyp))
+            ftyp
+          =/  lim  (~(get-limb jt jyp) p.p.ftyp)
+          ?~  lim  ftyp
+          ?>  ?=(%& -.u.lim)
+          p.p.u.lim(name name.ftyp)
+        $(flds t.flds, acc [[name.i.flds ftyp] acc])
+      =/  struct-jyp=jype  [[%struct name.j resolved-fields] name.j]
       =/  val=nock  (type-to-default struct-jyp)
-      [val struct-jyp]
+      ::  Push struct bunt onto subject (Nock 8) rather than replacing it,
+      ::  so previous type definitions remain accessible for nested structs.
+      [[%8 val [%0 1]] (~(cons jt struct-jyp) jyp)]
     ::
         %struct-literal
       ~|  %struct-literal
