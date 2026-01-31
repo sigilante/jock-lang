@@ -1167,9 +1167,11 @@
       ~|  'class: expected method name'
       (got-name -.tokens)
     =.  tokens  +.tokens
-    ::  Parse method arguments: name(self, other: Type)
+    ::  Parse method arguments: name(self: Type) or name(self: Type, p: Type)
+    ::  Convert (( to ( so match-jype enters tuple parsing path for multi-arg
+    =.  tokens  [[%punctuator %'('] +.tokens]
     =^  inp=jype  tokens
-      (match-block [tokens %'((' %')'] match-jype)
+      (match-jype tokens)
     ::  Parse return type: -> Type
     ?>  (got-punctuator -.tokens %'->')
     =.  tokens  +.tokens
@@ -1354,6 +1356,8 @@
       ?:  (has-punctuator -.tokens %')')
         ::  short-circuit if single element in cell
         [[jyp-one ~] tokens]
+      =?  tokens  (has-punctuator -.tokens %',')
+        +.tokens
       =^  jyp-two  tokens  (match-jype tokens)
       ::  TODO: support implicit right-association  (what's a good test case?)
       [[jyp-one `jyp-two] tokens]
@@ -2178,6 +2182,14 @@
       ::  Eagerly resolve %limb references in method argument types
       ::  so type-to-default can compute defaults without limb lookups.
       =.  arms.j
+        =/  resolve-one
+          |=  j=jype
+          ^-  jype
+          ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+          =/  lim  (~(get-limb jt jyp) p.p.j)
+          ?~  lim  j
+          ?.  ?=(%& -.u.lim)  j
+          p.p.u.lim(name name.j)
         %-  ~(run by arms.j)
         |=  arm=jock
         ?.  ?=(%method -.arm)  arm
@@ -2185,12 +2197,13 @@
         ?.  ?=(%lambda -.lam)  arm
         ?~  inp.arg.p.lam  arm
         =/  inp-jyp=jype  u.inp.arg.p.lam
-        ?.  ?&(?=(@ -<.inp-jyp) ?=(%limb -.p.inp-jyp))
-          arm
-        =/  lim  (~(get-limb jt jyp) p.p.inp-jyp)
-        ?~  lim  arm
-        ?.  ?=(%& -.u.lim)  arm
-        =.  u.inp.arg.p.lam  p.p.u.lim(name name.inp-jyp)
+        =.  u.inp.arg.p.lam
+          ::  single jype: resolve directly; cell jype: resolve each half
+          ?.  ?=(^ -<.inp-jyp)
+            (resolve-one inp-jyp)
+          =/  sub-a=jype  (resolve-one -.-.inp-jyp)
+          =/  sub-b=jype  (resolve-one +.-.inp-jyp)
+          [[sub-a sub-b] +.inp-jyp]
         arm(body lam)
       ::  door sample
       =/  sam-nok  (type-to-default state.j)
@@ -2396,18 +2409,38 @@
         ::    7. class instance leg (single jlimb, name in state)
         ::       instance.state()
         ::
+        ~&  [%call-limbs limbs]
         =/  [typ=jype ljl=(list jlimb) ljw=(list jwing)]
           ?.  =([%axis 0] -.limbs)
             =/  lim  (~(get-limb jt jyp) limbs)
-            ?~  lim  ~|('limb not found' !!)
-            ?:  ?=(%& -.u.lim)
-              [p.p.u.lim ~ q.p.u.lim]
-            p.u.lim
+            ~&  [%call-lim-result ?=(^ lim)]
+            ?^  lim
+              ~&  [%call-lim-tag ?=(%& -.u.lim)]
+              ?:  ?=(%& -.u.lim)
+                ~&  [%call-lim-typ-head -<.p.p.u.lim]
+                [p.p.u.lim ~ q.p.u.lim]
+              p.u.lim
+            ::  Fallback: resolve just the first limb (instance name),
+            ::  check if it's a struct from a class, and construct a
+            ::  %limb reference to the class type for method dispatch.
+            ?>  ?=(^ t.limbs)
+            =/  inst-lim  (~(get-limb jt jyp) ~[i.limbs])
+            ?~  inst-lim  ~|('limb not found' !!)
+            ?>  ?=(%& -.u.inst-lim)
+            =/  inst-typ=jype  p.p.u.inst-lim
+            =/  inst-wing=(list jwing)  q.p.u.inst-lim
+            ?.  ?&(?=(@ -<.inst-typ) ?=(%struct -.p.inst-typ))
+              ~|('limb not found' !!)
+            ::  Construct a %limb pointing to the class type,
+            ::  as expected by case-3 method dispatch.
+            ~&  [%fallback-result name.p.inst-typ name.inst-typ]
+            [[[%limb ~[[%type name.p.inst-typ]]] name.inst-typ] ~ inst-wing]
           ::  special case: we're looking for $
           =/  ret  (~(find-buc jt jyp))
           ?~  ret  ~|("couldn't find $ in {<jyp>}" !!)
           [-.u.ret ~ ~[[2 +.u.ret]]]
         ::
+        ~&  [%call-typ-head -<.typ %ljl-empty =(~ ljl)]
         ?:  !=(~ ljl)
           ::  case 6, library call
           ::    library.func(args)
@@ -2448,7 +2481,6 @@
         ::  [%call func=[%limb p=(list jlimb)] arg=(unit jock)]
         ::    Type(state)
         ?^  -<.typ
-          ~|  %call-case-2-args
           ?:  ?=(%type -<.limbs)
             ?~  arg.j  ~|("expect method argument" !!)
             =+  [val val-jyp]=$(j u.arg.j)
@@ -2530,7 +2562,6 @@
               [%0 6]  :: door state is always at sample +6
             [%0 ;;(@ +>-.u.ljs)]
           ::
-          ~|  %call-case-3
           ::  class method call in instance (case 3)
           ::    instance.method(args)
           ::  In this case, we have located the class instance
@@ -2544,17 +2575,65 @@
           ?>  ?=(%core -<.u.gat)
           ?.  ?=(%& -.p.p.u.gat)  ~|("method cannot be lambda" !!)
           =/  dor-nom  -<+.dyp  :: class name, used to determine return type
+          =/  method-inp=(unit jype)  inp.p.p.p.u.gat
           :: Output is a regular type.
           ^-  [nock jype]
           :_  out.p.p.p.u.gat
+          ::  Step 1: Pull method arm from the class door to get a gate.
+          ::  Step 2: Replace the gate's sample with [self args] and fire.
+          ::  ljd = wing to class door (battery+sample in subject)
+          ::  ljw = wing to instance struct data
+          ::  ljg = wing to method arm in the door
+          ::  Method call pattern:
+          ::  1. Push class door on subject (%8)
+          ::  2. Pull arm from door with sample set (%9 arm %10 [6 sample] door)
+          ::     → produces a gate
+          ::  3. Slam the gate (%9 2 gate)
+          ::
+          ::  ljd = wing to class door in subject
+          ::  ljw = wing to instance struct data in subject
+          ::  ljg = wing to method arm in class
+          ::  After %8, subject = [door old-sub]
+          ::    %0 2 = door, %0 3 = old-sub
+          ::  Method call Nock pattern:
+          ::  1. %8: push class door, subject = [door old-sub]
+          ::  2. %9 arm [%10 [6 state] door]: set door sample, fire arm → gate
+          ::  3. %10 [6 args] gate: set gate sample to actual arguments
+          ::  4. %9 2: fire gate body
+          =/  state-nock  [%7 [%0 3] (resolve-wing ljw)]
+          ~&  [%case3-ljd ljd]
+          ~&  [%case3-ljw ljw]
+          ~&  [%case3-ljg ljg]
+          ~&  [%case3-arm-axis ;;(@ -<.ljg)]
+          ~&  [%case3-method-inp method-inp]
           ?~  arg.j
-            (resolve-wing ljd)
-          :+  %8
-            :+  %7
-                (resolve-wing ljw)
-              [%9 ;;(@ -<.ljg) %0 1]
+            ::  No explicit arg: method takes only self.
+            ::  Gate sample = instance struct data.
+            :+  %8
+              (resolve-wing ljd)
+            :+  %9  2
+            :+  %10
+              [6 state-nock]
+            :+  %9  ;;(@ -<.ljg)
+            :+  %10
+              [6 state-nock]
+            [%0 2]
           =+  [arg arg-jyp]=$(j u.arg.j, jyp old-jyp)
-          [%9 2 %10 [6 [%7 [%0 3] arg]] %0 2]
+          =/  arg-nock  [%7 [%0 3] arg]
+          :+  %8
+            (resolve-wing ljd)
+          :+  %9  2
+          :+  %10
+            ::  Check if method expects multi-arg (cell input type)
+            ?.  ?&(?=(^ method-inp) ?=(^ -<.u.method-inp))
+              ::  single-arg: gate sample = caller arg
+              [6 arg-nock]
+            ::  multi-arg: gate sample = [instance-data caller-arg]
+            [6 [state-nock arg-nock]]
+          :+  %9  ;;(@ -<.ljg)
+          :+  %10
+            [6 state-nock]
+          [%0 2]
         ::
         ::  traditional function call (case 1)
         ::    func(args)
@@ -2687,20 +2766,22 @@
         `$(j u.context.p.j)
       ::  Resolve %limb references in lambda argument types eagerly
       ::  so struct fields are accessible inside function bodies.
+      =/  resolve-one
+        |=  j=jype
+        ^-  jype
+        ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+        =/  lim  (~(get-limb jt jyp) p.p.j)
+        ?~  lim  j
+        ?.  ?=(%& -.u.lim)  j
+        p.p.u.lim(name name.j)
       =.  u.inp.arg.p.j
-        ?.  ?&(?=(@ -<.u.inp.arg.p.j) ?=(%limb -.p.u.inp.arg.p.j))
-          u.inp.arg.p.j
-        =/  lim  (~(get-limb jt jyp) p.p.u.inp.arg.p.j)
-        ?~  lim  u.inp.arg.p.j
-        ?>  ?=(%& -.u.lim)
-        p.p.u.lim(name name.u.inp.arg.p.j)
-      =.  out.arg.p.j
-        ?.  ?&(?=(@ -<.out.arg.p.j) ?=(%limb -.p.out.arg.p.j))
-          out.arg.p.j
-        =/  lim  (~(get-limb jt jyp) p.p.out.arg.p.j)
-        ?~  lim  out.arg.p.j
-        ?>  ?=(%& -.u.lim)
-        p.p.u.lim(name name.out.arg.p.j)
+        =/  inp-jyp=jype  u.inp.arg.p.j
+        ?.  ?=(^ -<.inp-jyp)
+          (resolve-one inp-jyp)
+        =/  sub-a=jype  (resolve-one -.-.inp-jyp)
+        =/  sub-b=jype  (resolve-one +.-.inp-jyp)
+        [[sub-a sub-b] +.inp-jyp]
+      =.  out.arg.p.j  (resolve-one out.arg.p.j)
       =/  input-default  (type-to-default u.inp.arg.p.j)
       ~|  %enter-lambda-body
       =/  lam-jyp  (lam-j arg.p.j ?~(con `jyp `q.u.con))
