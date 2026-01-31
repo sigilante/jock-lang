@@ -59,6 +59,7 @@
       %func
       %lambda
       %struct
+      %class
       %impl
       %trait
       %union
@@ -186,7 +187,7 @@
   ++  keyword
     %-  perk
     :~  %let  %func  %lambda
-        %struct  %impl  %trait  %union  %alias
+        %struct  %class  %impl  %trait  %union  %alias
         %object  %if  %else  %crash  %assert
         %compose  %loop  %defer
         %recur  %match  %switch  %eval  %with  %this
@@ -408,10 +409,10 @@
       [%struct name=cord fields=(list [name=term type=jype])]
       [%struct-literal name=cord vals=(map term jock)]
       :: [%impl]
-      :: [%trait]
+      [%trait name=cord methods=(list term)]
       :: [%union]
       [%alias name=cord target=cord]
-      [%class state=jype arms=(map term jock)]
+      [%class state=jype arms=(map term jock) traits=(list cord)]
       [%method type=jype body=jock]
       ::
       [%object name=term p=(map term jock) q=(unit jock)]
@@ -525,6 +526,8 @@
       [%state p=jype]
       ::  %struct is a product type with named fields
       [%struct name=cord fields=struct-fields]
+      ::  %trait is a compile-time trait definition
+      [%trait name=cord methods=(list term)]
       ::  %none is a null type (as for undetermined variable labels)
       [%none p=(unit term)]
   ==
@@ -632,6 +635,8 @@
   ?:  ?|  (has-keyword -.tokens %object)
           (has-keyword -.tokens %alias)
           (has-keyword -.tokens %struct)
+          (has-keyword -.tokens %class)
+          (has-keyword -.tokens %trait)
           (has-keyword -.tokens %with)
           (has-keyword -.tokens %this)
           (has-keyword -.tokens %crash)
@@ -1071,6 +1076,28 @@
     =-  ~&(- -)
     [[%alias name target] tokens]
   ::
+  ::  trait Arithmetic { add; neg; }
+  ::  [%trait name=cord methods=(list term)]
+      %trait
+    =/  name=cord
+      ~|  'trait: expected trait name'
+      (got-type -.tokens)
+    =.  tokens  +.tokens
+    ?>  (got-punctuator -.tokens %'{')
+    =.  tokens  +.tokens
+    =|  methods=(list term)
+    =^  methods  tokens
+      |-
+      ?:  (has-punctuator -.tokens %'}')
+        [(flop methods) +.tokens]
+      =/  method-name=term
+        (got-name -.tokens)
+      =.  tokens  +.tokens
+      ?>  (got-punctuator -.tokens %';')
+      =.  tokens  +.tokens
+      $(methods [method-name methods])
+    [[%trait name methods] tokens]
+  ::
   ::  struct Point { x: Real, y: Real };
   ::  [%struct name=cord fields=(list [name=term type=jype])]
       %struct
@@ -1097,55 +1124,67 @@
       $(fields [[field-name field-type] fields])
     [[%struct name fields] tokens]
   ::
+  ::  class Point(PointState) { getx(self: PointState) -> Real { self.x } }
   ::  [%class state=jype arms=(map term jock)]
-    ::   %class
-    :: =^  state  tokens
-    ::   (match-jype tokens)
-    :: ::  mask out reserved types
-    :: ?:  =([%type 'List'] name.state)  ~|('Shadowing reserved type List is not allowed.' !!)
-    :: ?:  =([%type 'Set'] name.state)   ~|('Shadowing reserved type Set is not allowed.' !!)
-    :: :: ?:  =([%type 'Map'] name.state)   ~|('Shadowing reserved type Map is not allowed.' !!)
-    :: ?>  (got-punctuator -.tokens %'{')
-    :: =|  arms=(map term jock)
-    :: =.  tokens  +.tokens
-    :: =^  arms  tokens
-    ::   |-
-    ::   ?:  (has-punctuator -.tokens %'}')
-    ::     [arms +.tokens]
-    ::   ::  Retrieve the name of the method.
-    ::   =^  type  tokens
-    ::     (match-jype tokens)
-    ::   ::  Gather the arguments and output type.
-    ::   =^  inp  tokens
-    ::     ?>  (got-punctuator -.tokens %'((')
-    ::     =^  r=(pair jype (unit jype))  tokens
-    ::       =^  jyp-one  tokens  (match-jype +.tokens)
-    ::       ?:  (has-punctuator -.tokens %')')
-    ::         ::  short-circuit if single element in cell
-    ::         [[jyp-one ~] tokens]
-    ::       =^  jyp-two  tokens  (match-jype tokens)
-    ::       ::  TODO: support implicit right-association  (what's a good test case?)
-    ::       [[jyp-one `jyp-two] tokens]
-    ::     [?~(q.r `jype`p.r `jype`[[p.r u.q.r] %$]) tokens]
-    ::   ?>  (got-punctuator -.tokens %')')
-    ::   =.  tokens  +.tokens
-    ::   ?>  (got-punctuator -.tokens %'-')
-    ::   ?>  (got-punctuator +<.tokens %'>')
-    ::   =.  tokens  +>.tokens
-    ::   =^  out  tokens
-    ::     (match-jype tokens)
-    ::   =.  type
-    ::     :-  [%core [%& [`inp out]] ~]
-    ::     name.type
-    ::   ::  Retrieve the body of the method.
-    ::   =^  body  tokens
-    ::     (match-block [tokens %'{' %'}'] match-jock)
-    ::   =.  body
-    ::     :-  %lambda
-    ::     [[`inp out] body ~]
-    ::   $(arms (~(put by arms) name.type [%method type body]))
-    :: :_  tokens
-    :: [%class state=state arms=arms]
+      %class
+    ::  Parse class name
+    =/  class-name=cord
+      ~|  'class: expected class name'
+      (got-type -.tokens)
+    =.  tokens  +.tokens
+    ::  Parse state type in parens: ClassName(StateType)
+    =^  state-inner=jype  tokens
+      (match-block [tokens %'((' %')'] match-jype)
+    ::  Wrap state type as %state with class name
+    =/  state=jype  [[%state state-inner] class-name]
+    ::  Parse optional impl Trait1, Trait2
+    =|  traits=(list cord)
+    =^  traits  tokens
+      ?.  (has-keyword -.tokens %impl)
+        [~ tokens]
+      =.  tokens  +.tokens
+      =|  acc=(list cord)
+      |-
+      =/  trait-name=cord
+        ~|  'class impl: expected trait name'
+        (got-type -.tokens)
+      =.  tokens  +.tokens
+      =.  acc  [trait-name acc]
+      ?.  (has-punctuator -.tokens %',')
+        [(flop acc) tokens]
+      =.  tokens  +.tokens
+      $
+    ::  Parse method arms inside { }
+    ?>  (got-punctuator -.tokens %'{')
+    =.  tokens  +.tokens
+    =|  arms=(map term jock)
+    |-
+    ?:  (has-punctuator -.tokens %'}')
+      :_  +.tokens
+      [%class state=state arms=arms traits=traits]
+    ::  Parse method name
+    =/  method-name=cord
+      ~|  'class: expected method name'
+      (got-name -.tokens)
+    =.  tokens  +.tokens
+    ::  Parse method arguments: name(self: Type) or name(self: Type, p: Type)
+    ::  Convert (( to ( so match-jype enters tuple parsing path for multi-arg
+    =.  tokens  [[%punctuator %'('] +.tokens]
+    =^  inp=jype  tokens
+      (match-jype tokens)
+    ::  Parse return type: -> Type
+    ?>  (got-punctuator -.tokens %'->')
+    =.  tokens  +.tokens
+    =^  out=jype  tokens
+      (match-jype tokens)
+    =/  method-type=jype
+      [[%core [%& [`inp out]] ~] method-name]
+    ::  Parse method body: { ... }
+    =^  body=jock  tokens
+      (match-block [tokens %'{' %'}'] (curr match-jock-body %'}'))
+    =/  method-body=jock
+      [%lambda [`inp out] body ~]
+    $(arms (~(put by arms) method-name [%method method-type method-body]))
   ::
   ::  if (a < b) { +(a) } else { +(b) }
   ::  [%if cond=jock then=jock after-if=after-if-expression]
@@ -1317,6 +1356,8 @@
       ?:  (has-punctuator -.tokens %')')
         ::  short-circuit if single element in cell
         [[jyp-one ~] tokens]
+      =?  tokens  (has-punctuator -.tokens %',')
+        +.tokens
       =^  jyp-two  tokens  (match-jype tokens)
       ::  TODO: support implicit right-association  (what's a good test case?)
       [[jyp-one `jyp-two] tokens]
@@ -2036,7 +2077,13 @@
       ::  Create alias jype: same type structure but with alias name
       =/  alias-jyp=jype  target-jyp(name name.j)
       =/  val=nock  (type-to-default target-jyp)
-      [val alias-jyp]
+      ::  Push alias onto subject (like struct) so previous definitions
+      ::  remain accessible in subsequent compose expressions.
+      [[%8 val [%0 1]] (~(cons jt alias-jyp) jyp)]
+    ::
+        %trait
+      =/  trait-jyp=jype  [[%trait name.j methods.j] name.j]
+      [[%8 [%1 0] [%0 1]] (~(cons jt trait-jyp) jyp)]
     ::
         %struct
       ~|  %struct
@@ -2068,6 +2115,15 @@
       ?~  lim  ~|('struct not found' !!)
       ?>  ?=(%& -.u.lim)
       =/  styp=jype  p.p.u.lim
+      ::  If the name resolves to a class (cell jype-leaf, not atom tag),
+      ::  extract the struct from the %state wrapper inside the class type.
+      =.  styp
+        ?:  ?=(@ -<.styp)  styp
+        ::  Class type: jype-leaf is [state-jype core-jype]
+        ::  state-jype head is [[%state inner-struct-jype] name]
+        ::  -<-<.styp = %state tag, -<->.styp = inner-struct-jype
+        ?>  ?=(%state -<-<.styp)
+        -<->.styp
       ?>  ?=(@ -<.styp)
       ?>  ?=(%struct -.p.styp)
       =/  flds=(list [name=term type=jype])  fields.p.styp
@@ -2091,15 +2147,71 @@
     ::
         %class
       ~|  %class
+      ?>  ?=(%state -<.state.j)
+      ::  Resolve %limb reference in state type eagerly
+      ::  so struct fields are accessible in method bodies.
+      =/  resolved-state=jype
+        =/  inner=jype  p.p.state.j
+        ?.  ?&(?=(@ -<.inner) ?=(%limb -.p.inner))
+          inner
+        =/  lim  (~(get-limb jt jyp) p.p.inner)
+        ?~  lim  inner
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim(name name.inner)
+      =.  state.j  [[%state resolved-state] name.state.j]
+      ::  Validate trait conformance: all trait methods must exist in class
+      =.  traits.j
+        =/  tnames=(list cord)  traits.j
+        |-
+        ?~  tnames  traits.j
+        =/  tname=cord  i.tnames
+        =/  tlim  (~(get-limb jt jyp) ~[[%type tname]])
+        ?~  tlim  ~|('class impl: trait not found: {<tname>}' !!)
+        ?>  ?=(%& -.u.tlim)
+        =/  ttyp=jype  p.p.u.tlim
+        ?>  ?=(@ -<.ttyp)
+        ?.  ?=(%trait -.p.ttyp)
+          ~|('class impl: {<tname>} is not a trait' !!)
+        =/  required=(list term)  methods.p.ttyp
+        |-
+        ?~  required
+          ^$(tnames t.tnames)
+        ?.  (~(has by arms.j) i.required)
+          ~|('class impl: missing method {<i.required>} required by trait {<tname>}' !!)
+        $(required t.required)
+      ::  Eagerly resolve %limb references in method argument types
+      ::  so type-to-default can compute defaults without limb lookups.
+      =.  arms.j
+        =/  resolve-one
+          |=  j=jype
+          ^-  jype
+          ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+          =/  lim  (~(get-limb jt jyp) p.p.j)
+          ?~  lim  j
+          ?.  ?=(%& -.u.lim)  j
+          p.p.u.lim(name name.j)
+        %-  ~(run by arms.j)
+        |=  arm=jock
+        ?.  ?=(%method -.arm)  arm
+        =/  lam=jock  body.arm
+        ?.  ?=(%lambda -.lam)  arm
+        ?~  inp.arg.p.lam  arm
+        =/  inp-jyp=jype  u.inp.arg.p.lam
+        =.  u.inp.arg.p.lam
+          ::  single jype: resolve directly; cell jype: resolve each half
+          ?.  ?=(^ -<.inp-jyp)
+            (resolve-one inp-jyp)
+          =/  sub-a=jype  (resolve-one -.-.inp-jyp)
+          =/  sub-b=jype  (resolve-one +.-.inp-jyp)
+          [[sub-a sub-b] +.inp-jyp]
+        arm(body lam)
       ::  door sample
       =/  sam-nok  (type-to-default state.j)
-      ::  unified context including door sample in context
-      ?>  ?=(%state -<.state.j)
       ::  exe-jyp has list of untyped arms plus door state
       =/  exe-jyp=jype
-        :: instead of untyped, assume correct output type in exe-jyp
+        :: Context includes resolved state type for field access in methods
         =/  context=jype
-          (~(cons jt p.p.state.j) jyp)
+          (~(cons jt resolved-state) jyp)
         [[%core %|^(~(run by arms.j) |=(* untyped-j)) `context] %$]
       =/  lis=(list [name=term val=jock])  ~(tap by arms.j)
       ?>  ?=(^ lis)
@@ -2297,18 +2409,38 @@
         ::    7. class instance leg (single jlimb, name in state)
         ::       instance.state()
         ::
+        ~&  [%call-limbs limbs]
         =/  [typ=jype ljl=(list jlimb) ljw=(list jwing)]
           ?.  =([%axis 0] -.limbs)
             =/  lim  (~(get-limb jt jyp) limbs)
-            ?~  lim  ~|('limb not found' !!)
-            ?:  ?=(%& -.u.lim)
-              [p.p.u.lim ~ q.p.u.lim]
-            p.u.lim
+            ~&  [%call-lim-result ?=(^ lim)]
+            ?^  lim
+              ~&  [%call-lim-tag ?=(%& -.u.lim)]
+              ?:  ?=(%& -.u.lim)
+                ~&  [%call-lim-typ-head -<.p.p.u.lim]
+                [p.p.u.lim ~ q.p.u.lim]
+              p.u.lim
+            ::  Fallback: resolve just the first limb (instance name),
+            ::  check if it's a struct from a class, and construct a
+            ::  %limb reference to the class type for method dispatch.
+            ?>  ?=(^ t.limbs)
+            =/  inst-lim  (~(get-limb jt jyp) ~[i.limbs])
+            ?~  inst-lim  ~|('limb not found' !!)
+            ?>  ?=(%& -.u.inst-lim)
+            =/  inst-typ=jype  p.p.u.inst-lim
+            =/  inst-wing=(list jwing)  q.p.u.inst-lim
+            ?.  ?&(?=(@ -<.inst-typ) ?=(%struct -.p.inst-typ))
+              ~|('limb not found' !!)
+            ::  Construct a %limb pointing to the class type,
+            ::  as expected by case-3 method dispatch.
+            ~&  [%fallback-result name.p.inst-typ name.inst-typ]
+            [[[%limb ~[[%type name.p.inst-typ]]] name.inst-typ] ~ inst-wing]
           ::  special case: we're looking for $
           =/  ret  (~(find-buc jt jyp))
           ?~  ret  ~|("couldn't find $ in {<jyp>}" !!)
           [-.u.ret ~ ~[[2 +.u.ret]]]
         ::
+        ~&  [%call-typ-head -<.typ %ljl-empty =(~ ljl)]
         ?:  !=(~ ljl)
           ::  case 6, library call
           ::    library.func(args)
@@ -2349,7 +2481,6 @@
         ::  [%call func=[%limb p=(list jlimb)] arg=(unit jock)]
         ::    Type(state)
         ?^  -<.typ
-          ~|  %call-case-2-args
           ?:  ?=(%type -<.limbs)
             ?~  arg.j  ~|("expect method argument" !!)
             =+  [val val-jyp]=$(j u.arg.j)
@@ -2431,7 +2562,6 @@
               [%0 6]  :: door state is always at sample +6
             [%0 ;;(@ +>-.u.ljs)]
           ::
-          ~|  %call-case-3
           ::  class method call in instance (case 3)
           ::    instance.method(args)
           ::  In this case, we have located the class instance
@@ -2445,17 +2575,65 @@
           ?>  ?=(%core -<.u.gat)
           ?.  ?=(%& -.p.p.u.gat)  ~|("method cannot be lambda" !!)
           =/  dor-nom  -<+.dyp  :: class name, used to determine return type
+          =/  method-inp=(unit jype)  inp.p.p.p.u.gat
           :: Output is a regular type.
           ^-  [nock jype]
           :_  out.p.p.p.u.gat
+          ::  Step 1: Pull method arm from the class door to get a gate.
+          ::  Step 2: Replace the gate's sample with [self args] and fire.
+          ::  ljd = wing to class door (battery+sample in subject)
+          ::  ljw = wing to instance struct data
+          ::  ljg = wing to method arm in the door
+          ::  Method call pattern:
+          ::  1. Push class door on subject (%8)
+          ::  2. Pull arm from door with sample set (%9 arm %10 [6 sample] door)
+          ::     → produces a gate
+          ::  3. Slam the gate (%9 2 gate)
+          ::
+          ::  ljd = wing to class door in subject
+          ::  ljw = wing to instance struct data in subject
+          ::  ljg = wing to method arm in class
+          ::  After %8, subject = [door old-sub]
+          ::    %0 2 = door, %0 3 = old-sub
+          ::  Method call Nock pattern:
+          ::  1. %8: push class door, subject = [door old-sub]
+          ::  2. %9 arm [%10 [6 state] door]: set door sample, fire arm → gate
+          ::  3. %10 [6 args] gate: set gate sample to actual arguments
+          ::  4. %9 2: fire gate body
+          =/  state-nock  [%7 [%0 3] (resolve-wing ljw)]
+          ~&  [%case3-ljd ljd]
+          ~&  [%case3-ljw ljw]
+          ~&  [%case3-ljg ljg]
+          ~&  [%case3-arm-axis ;;(@ -<.ljg)]
+          ~&  [%case3-method-inp method-inp]
           ?~  arg.j
-            (resolve-wing ljd)
-          :+  %8
-            :+  %7
-                (resolve-wing ljw)
-              [%9 ;;(@ -<.ljg) %0 1]
+            ::  No explicit arg: method takes only self.
+            ::  Gate sample = instance struct data.
+            :+  %8
+              (resolve-wing ljd)
+            :+  %9  2
+            :+  %10
+              [6 state-nock]
+            :+  %9  ;;(@ -<.ljg)
+            :+  %10
+              [6 state-nock]
+            [%0 2]
           =+  [arg arg-jyp]=$(j u.arg.j, jyp old-jyp)
-          [%9 2 %10 [6 [%7 [%0 3] arg]] %0 2]
+          =/  arg-nock  [%7 [%0 3] arg]
+          :+  %8
+            (resolve-wing ljd)
+          :+  %9  2
+          :+  %10
+            ::  Check if method expects multi-arg (cell input type)
+            ?.  ?&(?=(^ method-inp) ?=(^ -<.u.method-inp))
+              ::  single-arg: gate sample = caller arg
+              [6 arg-nock]
+            ::  multi-arg: gate sample = [instance-data caller-arg]
+            [6 [state-nock arg-nock]]
+          :+  %9  ;;(@ -<.ljg)
+          :+  %10
+            [6 state-nock]
+          [%0 2]
         ::
         ::  traditional function call (case 1)
         ::    func(args)
@@ -2588,20 +2766,22 @@
         `$(j u.context.p.j)
       ::  Resolve %limb references in lambda argument types eagerly
       ::  so struct fields are accessible inside function bodies.
+      =/  resolve-one
+        |=  j=jype
+        ^-  jype
+        ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+        =/  lim  (~(get-limb jt jyp) p.p.j)
+        ?~  lim  j
+        ?.  ?=(%& -.u.lim)  j
+        p.p.u.lim(name name.j)
       =.  u.inp.arg.p.j
-        ?.  ?&(?=(@ -<.u.inp.arg.p.j) ?=(%limb -.p.u.inp.arg.p.j))
-          u.inp.arg.p.j
-        =/  lim  (~(get-limb jt jyp) p.p.u.inp.arg.p.j)
-        ?~  lim  u.inp.arg.p.j
-        ?>  ?=(%& -.u.lim)
-        p.p.u.lim(name name.u.inp.arg.p.j)
-      =.  out.arg.p.j
-        ?.  ?&(?=(@ -<.out.arg.p.j) ?=(%limb -.p.out.arg.p.j))
-          out.arg.p.j
-        =/  lim  (~(get-limb jt jyp) p.p.out.arg.p.j)
-        ?~  lim  out.arg.p.j
-        ?>  ?=(%& -.u.lim)
-        p.p.u.lim(name name.out.arg.p.j)
+        =/  inp-jyp=jype  u.inp.arg.p.j
+        ?.  ?=(^ -<.inp-jyp)
+          (resolve-one inp-jyp)
+        =/  sub-a=jype  (resolve-one -.-.inp-jyp)
+        =/  sub-b=jype  (resolve-one +.-.inp-jyp)
+        [[sub-a sub-b] +.inp-jyp]
+      =.  out.arg.p.j  (resolve-one out.arg.p.j)
       =/  input-default  (type-to-default u.inp.arg.p.j)
       ~|  %enter-lambda-body
       =/  lam-jyp  (lam-j arg.p.j ?~(con `jyp `q.u.con))
@@ -2766,7 +2946,8 @@
   ++  type-to-default
     |=  j=jype
     ^-  nock
-    ?^  -<.j    [$(j p.j) $(j q.j)]
+    ?.  ?=(@ -<.j)
+      [$(j p.j) $(j q.j)]
     ?-    -.p.j
     ::
         %atom      [%1 0]
@@ -2802,6 +2983,8 @@
       =/  this=nock  $(j type.i.flds)
       ?~  t.flds  this
       [this $(j [[%struct name.p.j t.flds] name.j])]
+    ::
+        %trait     [%1 0]
     ::
         %none      [%1 0]
     ==
