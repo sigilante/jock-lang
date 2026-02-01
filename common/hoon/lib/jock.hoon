@@ -90,7 +90,11 @@
       %'('  %')'  %'{'  %'}'  %'['  %']'
       %'='  %'<'  %'>'  %'#'
       %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
-      %'×'
+      %'×'  %'÷'  %'±'
+      %'⊕'  %'⊗'  %'⊖'
+      %'∘'  %'·'
+      %'∩'  %'∪'  %'∈'  %'⊂'  %'⊃'
+      %'^'  %'|'  %'\\'
       %'->'
   ==
 ::
@@ -345,13 +349,27 @@
   ++  punctuator
     ;~  pose
         (cold %'->' (jest '->'))   :: must come before solo '-'
-        (cold %'×' (jest '×'))     :: Unicode multiply
+        ::  Unicode operators (multi-byte, must come before perk)
+        (cold %'×' (jest '×'))
+        (cold %'÷' (jest '÷'))
+        (cold %'±' (jest '±'))
+        (cold %'⊕' (jest '⊕'))
+        (cold %'⊗' (jest '⊗'))
+        (cold %'⊖' (jest '⊖'))
+        (cold %'∘' (jest '∘'))
+        (cold %'·' (jest '·'))
+        (cold %'∩' (jest '∩'))
+        (cold %'∪' (jest '∪'))
+        (cold %'∈' (jest '∈'))
+        (cold %'⊂' (jest '⊂'))
+        (cold %'⊃' (jest '⊃'))
         %-  perk
         :~  %'.'  %';'  %','  %':'  %'&'  %'$'
             %'@'  %'?'  %'!'  :: XXX exclude %'((' which is a pseudo-punctuator
             %'('  %')'  %'{'  %'}'  %'['  %']'
             %'='  %'<'  %'>'  %'#'
             %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
+            %'^'  %'|'  %'\\'
     ==  ==
   ::
   ::  The parser's precedence rules:
@@ -491,7 +509,11 @@
       %'/'
       %'%'
       %'**'
-      %'×'
+      %'×'  %'÷'  %'±'
+      %'⊕'  %'⊗'  %'⊖'
+      %'∘'  %'·'
+      %'∩'  %'∪'  %'∈'  %'⊂'  %'⊃'
+      %'^'  %'|'  %'\\'
   ==
 ::
 ++  operator-set
@@ -499,7 +521,8 @@
   ^-  (set term)
   %-  silt
   ^-  (list operator)
-  ~[%'+' %'-' %'*' %'/' %'%' %'**' %'×']
+  %-  welp  :_  ~[%'×' %'÷' %'±' %'⊕' %'⊗' %'⊖' %'∘' %'·' %'∩' %'∪' %'∈' %'⊂' %'⊃' %'^' %'|' %'\\']
+  ~[%'+' %'-' %'*' %'/' %'%' %'**']
 ::  Jype type base types
 +$  jype
   $+  jype
@@ -675,6 +698,21 @@
           (has-punctuator -.tokens %'/')
           (has-punctuator -.tokens %'%')
           (has-punctuator -.tokens %'×')
+          (has-punctuator -.tokens %'÷')
+          (has-punctuator -.tokens %'±')
+          (has-punctuator -.tokens %'⊕')
+          (has-punctuator -.tokens %'⊗')
+          (has-punctuator -.tokens %'⊖')
+          (has-punctuator -.tokens %'∘')
+          (has-punctuator -.tokens %'·')
+          (has-punctuator -.tokens %'∩')
+          (has-punctuator -.tokens %'∪')
+          (has-punctuator -.tokens %'∈')
+          (has-punctuator -.tokens %'⊂')
+          (has-punctuator -.tokens %'⊃')
+          (has-punctuator -.tokens %'^')
+          (has-punctuator -.tokens %'|')
+          (has-punctuator -.tokens %'\\')
           :: &((has-punctuator -.tokens %'*') (has-punctuator +<.tokens %'*')) :: subcase of '*'
       ==
     =>  .(tokens `(list token)`tokens)  :: TMI
@@ -1692,6 +1730,36 @@
     [`%'*' +.tokens]
   ?:  (has-punctuator -.tokens %'×')
     [`%'×' +.tokens]
+  ?:  (has-punctuator -.tokens %'÷')
+    [`%'÷' +.tokens]
+  ?:  (has-punctuator -.tokens %'±')
+    [`%'±' +.tokens]
+  ?:  (has-punctuator -.tokens %'⊕')
+    [`%'⊕' +.tokens]
+  ?:  (has-punctuator -.tokens %'⊗')
+    [`%'⊗' +.tokens]
+  ?:  (has-punctuator -.tokens %'⊖')
+    [`%'⊖' +.tokens]
+  ?:  (has-punctuator -.tokens %'∘')
+    [`%'∘' +.tokens]
+  ?:  (has-punctuator -.tokens %'·')
+    [`%'·' +.tokens]
+  ?:  (has-punctuator -.tokens %'∩')
+    [`%'∩' +.tokens]
+  ?:  (has-punctuator -.tokens %'∪')
+    [`%'∪' +.tokens]
+  ?:  (has-punctuator -.tokens %'∈')
+    [`%'∈' +.tokens]
+  ?:  (has-punctuator -.tokens %'⊂')
+    [`%'⊂' +.tokens]
+  ?:  (has-punctuator -.tokens %'⊃')
+    [`%'⊃' +.tokens]
+  ?:  (has-punctuator -.tokens %'^')
+    [`%'^' +.tokens]
+  ?:  (has-punctuator -.tokens %'|')
+    [`%'|' +.tokens]
+  ?:  (has-punctuator -.tokens %'\\')
+    [`%'\\' +.tokens]
   ?:  (has-punctuator -.tokens %'/')
     [`%'/' +.tokens]
   ?:  (has-punctuator -.tokens %'%')
@@ -2805,6 +2873,26 @@
         ?~  b.j  !!
         =/  j=jock  [%call [%limb p=~[[%name %hoon] [%name %pow]]] arg=`[a.j u.b.j]]
         -:$(j j)
+        ::
+          %'÷'
+        ?~  b.j  !!
+        =/  j=jock  [%call [%limb p=~[[%name %hoon] [%name %div]]] arg=`[a.j u.b.j]]
+        -:$(j j)
+        ::  Overload-only operators: crash if no trait mapping found
+          %'±'   ~|('± requires operator overload via trait' !!)
+          %'⊕'   ~|('⊕ requires operator overload via trait' !!)
+          %'⊗'   ~|('⊗ requires operator overload via trait' !!)
+          %'⊖'   ~|('⊖ requires operator overload via trait' !!)
+          %'∘'   ~|('∘ requires operator overload via trait' !!)
+          %'·'   ~|('· requires operator overload via trait' !!)
+          %'∩'   ~|('∩ requires operator overload via trait' !!)
+          %'∪'   ~|('∪ requires operator overload via trait' !!)
+          %'∈'   ~|('∈ requires operator overload via trait' !!)
+          %'⊂'   ~|('⊂ requires operator overload via trait' !!)
+          %'⊃'   ~|('⊃ requires operator overload via trait' !!)
+          %'^'   ~|('^ requires operator overload via trait' !!)
+          %'|'   ~|('| requires operator overload via trait' !!)
+          %'\\'   ~|('\\ requires operator overload via trait' !!)
         ::
       ==
     ::
