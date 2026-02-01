@@ -90,6 +90,7 @@
       %'('  %')'  %'{'  %'}'  %'['  %']'
       %'='  %'<'  %'>'  %'#'
       %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
+      %'×'
       %'->'
   ==
 ::
@@ -344,6 +345,7 @@
   ++  punctuator
     ;~  pose
         (cold %'->' (jest '->'))   :: must come before solo '-'
+        (cold %'×' (jest '×'))     :: Unicode multiply
         %-  perk
         :~  %'.'  %';'  %','  %':'  %'&'  %'$'
             %'@'  %'?'  %'!'  :: XXX exclude %'((' which is a pseudo-punctuator
@@ -489,6 +491,7 @@
       %'/'
       %'%'
       %'**'
+      %'×'
   ==
 ::
 ++  operator-set
@@ -496,7 +499,7 @@
   ^-  (set term)
   %-  silt
   ^-  (list operator)
-  ~[%'+' %'-' %'*' %'/' %'%' %'**']
+  ~[%'+' %'-' %'*' %'/' %'%' %'**' %'×']
 ::  Jype type base types
 +$  jype
   $+  jype
@@ -671,6 +674,7 @@
           (has-punctuator -.tokens %'*')
           (has-punctuator -.tokens %'/')
           (has-punctuator -.tokens %'%')
+          (has-punctuator -.tokens %'×')
           :: &((has-punctuator -.tokens %'*') (has-punctuator +<.tokens %'*')) :: subcase of '*'
       ==
     =>  .(tokens `(list token)`tokens)  :: TMI
@@ -1686,6 +1690,8 @@
     [`%'-' +.tokens]
   ?:  (has-punctuator -.tokens %'*')
     [`%'*' +.tokens]
+  ?:  (has-punctuator -.tokens %'×')
+    [`%'×' +.tokens]
   ?:  (has-punctuator -.tokens %'/')
     [`%'/' +.tokens]
   ?:  (has-punctuator -.tokens %'%')
@@ -2776,6 +2782,11 @@
         -:$(j j)
         ::
           %'*'
+        ?~  b.j  !!
+        =/  j=jock  [%call [%limb p=~[[%name %hoon] [%name %mul]]] arg=`[a.j u.b.j]]
+        -:$(j j)
+        ::
+          %'×'
         ?~  b.j  !!
         =/  j=jock  [%call [%limb p=~[[%name %hoon] [%name %mul]]] arg=`[a.j u.b.j]]
         -:$(j j)
