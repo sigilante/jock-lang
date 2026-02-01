@@ -2186,6 +2186,9 @@
           |=  j=jype
           ^-  jype
           ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+          ::  Self resolves to the class state type
+          ?:  =(~[[%type 'Self']] p.p.j)
+            resolved-state(name name.j)
           =/  lim  (~(get-limb jt jyp) p.p.j)
           ?~  lim  j
           ?.  ?=(%& -.u.lim)  j
@@ -2204,6 +2207,7 @@
           =/  sub-a=jype  (resolve-one -.-.inp-jyp)
           =/  sub-b=jype  (resolve-one +.-.inp-jyp)
           [[sub-a sub-b] +.inp-jyp]
+        =.  out.arg.p.lam  (resolve-one out.arg.p.lam)
         arm(body lam)
       ::  door sample
       =/  sam-nok  (type-to-default state.j)
