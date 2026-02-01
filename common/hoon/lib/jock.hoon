@@ -2545,7 +2545,9 @@
           ?:  ?=(%& -.p.p.cyp)  ~|("class cannot be lambda" !!)
           ::  Search for the door defn in the subject jype.
           =/  gat-nom  `cord`+<+.limbs
-          =/  gat-lim  (~(get-limb jt dyp) +.limbs)
+          ::  Strip name from class def so axis-at-name can recurse
+          ::  into the [state core] pair to find method arms.
+          =/  gat-lim  (~(get-limb jt dyp(name %$)) +.limbs)
           ?~  gat-lim
             ~|  %call-case-7
             ::  Getter for state variables.
@@ -2600,6 +2602,9 @@
           ::  2. %9 arm [%10 [6 state] door]: set door sample, fire arm → gate
           ::  3. %10 [6 args] gate: set gate sample to actual arguments
           ::  4. %9 2: fire gate body
+          =/  bat-nock=nock  (resolve-wing ljd)
+          ?>  ?=([%0 *] bat-nock)
+          =/  door-nock=nock  bat-nock(p (div p.bat-nock 2))
           =/  state-nock  [%7 [%0 3] (resolve-wing ljw)]
           ~&  [%case3-ljd ljd]
           ~&  [%case3-ljw ljw]
@@ -2610,7 +2615,7 @@
             ::  No explicit arg: method takes only self.
             ::  Gate sample = instance struct data.
             :+  %8
-              (resolve-wing ljd)
+              door-nock
             :+  %9  2
             :+  %10
               [6 state-nock]
@@ -2621,7 +2626,7 @@
           =+  [arg arg-jyp]=$(j u.arg.j, jyp old-jyp)
           =/  arg-nock  [%7 [%0 3] arg]
           :+  %8
-            (resolve-wing ljd)
+            door-nock
           :+  %9  2
           :+  %10
             ::  Check if method expects multi-arg (cell input type)
