@@ -409,7 +409,7 @@
       [%struct name=cord fields=(list [name=term type=jype])]
       [%struct-literal name=cord vals=(map term jock)]
       :: [%impl]
-      [%trait name=cord methods=(list term)]
+      [%trait name=cord methods=(list term) op=(unit operator)]
       :: [%union]
       [%alias name=cord target=cord]
       [%class state=jype arms=(map term jock) traits=(list cord)]
@@ -527,7 +527,7 @@
       ::  %struct is a product type with named fields
       [%struct name=cord fields=struct-fields]
       ::  %trait is a compile-time trait definition
-      [%trait name=cord methods=(list term)]
+      [%trait name=cord methods=(list term) op=(unit operator)]
       ::  %none is a null type (as for undetermined variable labels)
       [%none p=(unit term)]
   ==
@@ -1077,12 +1077,26 @@
     [[%alias name target] tokens]
   ::
   ::  trait Arithmetic { add; neg; }
-  ::  [%trait name=cord methods=(list term)]
+  ::  trait Add(+) { add; }
+  ::  [%trait name=cord methods=(list term) op=(unit operator)]
       %trait
     =/  name=cord
       ~|  'trait: expected trait name'
       (got-type -.tokens)
     =.  tokens  +.tokens
+    ::  Optional operator mapping: trait Add(+) { ... }
+    =|  op=(unit operator)
+    =^  op  tokens
+      ::  Check for (( which is what ( becomes after a type name
+      ?.  (has-punctuator -.tokens %'((')  [~ tokens]
+      =.  tokens  +.tokens
+      =/  tok=token  -.tokens
+      ?>  ?=([%punctuator *] tok)
+      ?>  (~(has in operator-set) +.tok)
+      =.  tokens  +.tokens
+      ?>  (got-punctuator -.tokens %')')
+      =.  tokens  +.tokens
+      [`;;(operator +.tok) tokens]
     ?>  (got-punctuator -.tokens %'{')
     =.  tokens  +.tokens
     =|  methods=(list term)
@@ -1096,7 +1110,7 @@
       ?>  (got-punctuator -.tokens %';')
       =.  tokens  +.tokens
       $(methods [method-name methods])
-    [[%trait name methods] tokens]
+    [[%trait name methods op] tokens]
   ::
   ::  struct Point { x: Real, y: Real };
   ::  [%struct name=cord fields=(list [name=term type=jype])]
@@ -2082,7 +2096,7 @@
       [[%8 val [%0 1]] (~(cons jt alias-jyp) jyp)]
     ::
         %trait
-      =/  trait-jyp=jype  [[%trait name.j methods.j] name.j]
+      =/  trait-jyp=jype  [[%trait name.j methods.j op.j] name.j]
       [[%8 [%1 0] [%0 1]] (~(cons jt trait-jyp) jyp)]
     ::
         %struct
@@ -2714,6 +2728,41 @@
     ::
         %operator
       ~|  %operator
+      ::  Check for operator overloading on class instances
+      =/  op-method=(unit term)
+        ::  Only binary ops on variable references
+        ?~  b.j  ~
+        ?.  ?=(%limb -.a.j)  ~
+        ::  Look up variable type
+        =/  lim  (~(get-limb jt jyp) p.a.j)
+        ?~  lim  ~
+        ?.  ?=(%& -.u.lim)  ~
+        =/  typ=jype  p.p.u.lim
+        ::  Check if type is a struct (class instance state)
+        ?.  ?&(?=(@ -<.typ) ?=(%struct -.p.typ))  ~
+        ::  Walk jype for a trait with this operator
+        =<  (find-op jyp op.j)
+        |%
+        ++  find-op
+          |=  [j=jype op=operator]
+          ^-  (unit term)
+          ?:  ?=(@ -<.j)
+            ::  Leaf node: check if it's a trait with matching op
+            ?.  ?=(%trait -.p.j)  ~
+            ?.  =(`op op.p.j)  ~
+            ?~  methods.p.j  ~
+            `i.methods.p.j
+          ::  Cell node: search left then right
+          =/  l  $(j -<.j)
+          ?^  l  l
+          $(j ->.j)
+        --
+      ?^  op-method
+        ::  Rewrite: p + q  ->  p.method(q)
+        ?>  ?=(%limb -.a.j)
+        =/  j=jock  [%call [%limb (snoc p.a.j [%name u.op-method])] arg=b.j]
+        $(j j)
+      ::  Standard operator: returns atom type
       :_  [%atom %number %.n]^%$
       ?-    op.j
           %'+'
