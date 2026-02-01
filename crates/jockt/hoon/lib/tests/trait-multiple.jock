@@ -14,6 +14,6 @@ compose
     sub(self: PointState, p:PointState) -> PointState { ( self.x - p.x  self.y - p.y ) }
   }
 ;
-let p = Point { x: 42, y: 7 };
-let q = Point { x: 101, y: 105 };
+let p = Point { x: 101, y: 105 };
+let q = Point { x: 42, y: 7 };
 p.sub(q)

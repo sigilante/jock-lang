@@ -2409,15 +2409,11 @@
         ::    7. class instance leg (single jlimb, name in state)
         ::       instance.state()
         ::
-        ~&  [%call-limbs limbs]
         =/  [typ=jype ljl=(list jlimb) ljw=(list jwing)]
           ?.  =([%axis 0] -.limbs)
             =/  lim  (~(get-limb jt jyp) limbs)
-            ~&  [%call-lim-result ?=(^ lim)]
             ?^  lim
-              ~&  [%call-lim-tag ?=(%& -.u.lim)]
               ?:  ?=(%& -.u.lim)
-                ~&  [%call-lim-typ-head -<.p.p.u.lim]
                 [p.p.u.lim ~ q.p.u.lim]
               p.u.lim
             ::  Fallback: resolve just the first limb (instance name),
@@ -2433,14 +2429,12 @@
               ~|('limb not found' !!)
             ::  Construct a %limb pointing to the class type,
             ::  as expected by case-3 method dispatch.
-            ~&  [%fallback-result name.p.inst-typ name.inst-typ]
             [[[%limb ~[[%type name.p.inst-typ]]] name.inst-typ] ~ inst-wing]
           ::  special case: we're looking for $
           =/  ret  (~(find-buc jt jyp))
           ?~  ret  ~|("couldn't find $ in {<jyp>}" !!)
           [-.u.ret ~ ~[[2 +.u.ret]]]
         ::
-        ~&  [%call-typ-head -<.typ %ljl-empty =(~ ljl)]
         ?:  !=(~ ljl)
           ::  case 6, library call
           ::    library.func(args)
@@ -2606,11 +2600,6 @@
           ?>  ?=([%0 *] bat-nock)
           =/  door-nock=nock  bat-nock(p (div p.bat-nock 2))
           =/  state-nock  [%7 [%0 3] (resolve-wing ljw)]
-          ~&  [%case3-ljd ljd]
-          ~&  [%case3-ljw ljw]
-          ~&  [%case3-ljg ljg]
-          ~&  [%case3-arm-axis ;;(@ -<.ljg)]
-          ~&  [%case3-method-inp method-inp]
           ?~  arg.j
             ::  No explicit arg: method takes only self.
             ::  Gate sample = instance struct data.
