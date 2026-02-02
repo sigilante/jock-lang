@@ -632,28 +632,50 @@
         %punctuator  (match-start-punctuator tokens)
         %type        (match-start-name tokens)
     ==
+  ::  -- postfix indexing loop: expr[index]
+  |-
   ?:  =(~ tokens)  [lock tokens]
-  =^  oc=(unit term)  tokens
-    (any-operator tokens)
-  ?~  oc  [lock tokens]
-  ::  Handle mapping externally.
-  ?:  &(=(%'-' u.oc) =(%'>' ->.tokens))
-    ::  Re-attach map operator.
-    [lock [[%punctuator %'-'] tokens]]
-  ::  - compare ('==','<','<=','>','>=','!=' is the next token)
-  ?:  (~(has in comparator-set) u.oc)
-    =^  rock  tokens
-      (match-inner-jock tokens)
-    [[%compare ;;(comparator u.oc) lock rock] tokens]
-  ::  - arithmetic ('+' or '-' or '*' or '/' or '%' or '**' is next)
-  ?:  (~(has in operator-set) u.oc)
-    =^  rock  tokens
-      (match-inner-jock tokens)
-    :_  tokens
-    ;;  jock
-    [%operator u.oc lock `rock]
-  ::  no infix operator
-  [lock tokens]
+  ?.  (has-punctuator -.tokens %'[')
+    ::  not indexing, fall through to operator checks
+    =^  oc=(unit term)  tokens
+      (any-operator tokens)
+    ?~  oc  [lock tokens]
+    ::  Handle mapping externally.
+    ?:  &(=(%'-' u.oc) =(%'>' ->.tokens))
+      ::  Re-attach map operator.
+      [lock [[%punctuator %'-'] tokens]]
+    ::  - compare ('==','<','<=','>','>=','!=' is the next token)
+    ?:  (~(has in comparator-set) u.oc)
+      =^  rock  tokens
+        (match-inner-jock tokens)
+      [[%compare ;;(comparator u.oc) lock rock] tokens]
+    ::  - arithmetic ('+' or '-' or '*' or '/' or '%' or '**' is next)
+    ?:  (~(has in operator-set) u.oc)
+      =^  rock  tokens
+        (match-inner-jock tokens)
+      :_  tokens
+      ;;  jock
+      [%operator u.oc lock `rock]
+    ::  no infix operator
+    [lock tokens]
+  ::  parse index expression inside [...]
+  =^  idx  tokens
+    (match-inner-jock +.tokens)  :: skip '['
+  ::  check for range syntax: expr[start..end]
+  ?:  ?&  !=(~ tokens)
+          (has-punctuator -.tokens %'.')
+          !=(~ +.tokens)
+          (has-punctuator +<.tokens %'.')
+      ==
+    ~|("range indexing not yet supported" !!)
+  ?>  (got-punctuator -.tokens %']')
+  ::  desugar to hoon.snag(idx lock)
+  =/  snag-call=jock
+    :+  %call
+      [%limb ~[[%name %hoon] [%name %snag]]]
+    `[idx lock]
+  ::  loop to allow chaining: list[0][1]
+  $(lock snag-call, tokens +.tokens)
 ::
 ++  match-inner-jock
   |=  =tokens
@@ -677,53 +699,80 @@
         %punctuator  (match-start-punctuator tokens)
         %type        (match-start-name tokens)
     ==
-  ?~  tokens  [lock tokens]
-  ::  - compare ('==','<','<=','>','>=','!=' is the next token)
-  ?:  ?|  &((has-punctuator -.tokens %'=') (has-punctuator +<.tokens %'='))
-          (has-punctuator -.tokens %'<')
-          &((has-punctuator -.tokens %'<') (has-punctuator +<.tokens %'='))
-          (has-punctuator -.tokens %'>')
-          &((has-punctuator -.tokens %'>') (has-punctuator +<.tokens %'='))
-          &((has-punctuator -.tokens %'!') (has-punctuator +<.tokens %'='))
+  ::  -- postfix indexing loop: expr[index]
+  ::  Only index after names/calls/parens, not after list/set literals
+  |-
+  ?:  =(~ tokens)  [lock tokens]
+  ?.  ?&  (has-punctuator -.tokens %'[')
+          !?=(%list -.lock)
+          !?=(%set -.lock)
       ==
-    =>  .(tokens `(list token)`tokens)  :: TMI
-    =^  comp  tokens
-      (match-comparator tokens)
-    =^  rock  tokens
-      (match-inner-jock tokens)
-    [[%compare comp lock rock] tokens]
-  ::  - arithmetic ('+' or '-' or '*' or '/' or '%' or '**' is next)
-  ?:  ?|  (has-punctuator -.tokens %'+')
-          (has-punctuator -.tokens %'-')
-          (has-punctuator -.tokens %'*')
-          (has-punctuator -.tokens %'/')
-          (has-punctuator -.tokens %'%')
-          (has-punctuator -.tokens %'×')
-          (has-punctuator -.tokens %'÷')
-          (has-punctuator -.tokens %'±')
-          (has-punctuator -.tokens %'⊕')
-          (has-punctuator -.tokens %'⊗')
-          (has-punctuator -.tokens %'⊖')
-          (has-punctuator -.tokens %'∘')
-          (has-punctuator -.tokens %'·')
-          (has-punctuator -.tokens %'∩')
-          (has-punctuator -.tokens %'∪')
-          (has-punctuator -.tokens %'∈')
-          (has-punctuator -.tokens %'⊂')
-          (has-punctuator -.tokens %'⊃')
-          (has-punctuator -.tokens %'^')
-          (has-punctuator -.tokens %'|')
-          (has-punctuator -.tokens %'\\')
-          :: &((has-punctuator -.tokens %'*') (has-punctuator +<.tokens %'*')) :: subcase of '*'
+    ::  not indexing, fall through to comparator/operator checks
+    ?:  =(~ tokens)  [lock tokens]
+    ::  - compare ('==','<','<=','>','>=','!=' is the next token)
+    ?:  ?|  &((has-punctuator -.tokens %'=') (has-punctuator +<.tokens %'='))
+            (has-punctuator -.tokens %'<')
+            &((has-punctuator -.tokens %'<') (has-punctuator +<.tokens %'='))
+            (has-punctuator -.tokens %'>')
+            &((has-punctuator -.tokens %'>') (has-punctuator +<.tokens %'='))
+            &((has-punctuator -.tokens %'!') (has-punctuator +<.tokens %'='))
+        ==
+      =>  .(tokens `(list token)`tokens)  :: TMI
+      =^  comp  tokens
+        (match-comparator tokens)
+      =^  rock  tokens
+        (match-inner-jock tokens)
+      [[%compare comp lock rock] tokens]
+    ::  - arithmetic ('+' or '-' or '*' or '/' or '%' or '**' is next)
+    ?:  ?|  (has-punctuator -.tokens %'+')
+            (has-punctuator -.tokens %'-')
+            (has-punctuator -.tokens %'*')
+            (has-punctuator -.tokens %'/')
+            (has-punctuator -.tokens %'%')
+            (has-punctuator -.tokens %'×')
+            (has-punctuator -.tokens %'÷')
+            (has-punctuator -.tokens %'±')
+            (has-punctuator -.tokens %'⊕')
+            (has-punctuator -.tokens %'⊗')
+            (has-punctuator -.tokens %'⊖')
+            (has-punctuator -.tokens %'∘')
+            (has-punctuator -.tokens %'·')
+            (has-punctuator -.tokens %'∩')
+            (has-punctuator -.tokens %'∪')
+            (has-punctuator -.tokens %'∈')
+            (has-punctuator -.tokens %'⊂')
+            (has-punctuator -.tokens %'⊃')
+            (has-punctuator -.tokens %'^')
+            (has-punctuator -.tokens %'|')
+            (has-punctuator -.tokens %'\\')
+            :: &((has-punctuator -.tokens %'*') (has-punctuator +<.tokens %'*')) :: subcase of '*'
+        ==
+      =>  .(tokens `(list token)`tokens)  :: TMI
+      =^  op  tokens
+        (match-operator tokens)
+      =^  rock  tokens
+        (match-inner-jock tokens)
+      [[%operator op lock `rock] tokens]
+    ::  no infix operator
+    [lock tokens]
+  ::  parse index expression inside [...]
+  =^  idx  tokens
+    (match-inner-jock +.tokens)  :: skip '['
+  ::  check for range syntax: expr[start..end]
+  ?:  ?&  !=(~ tokens)
+          (has-punctuator -.tokens %'.')
+          !=(~ +.tokens)
+          (has-punctuator +<.tokens %'.')
       ==
-    =>  .(tokens `(list token)`tokens)  :: TMI
-    =^  op  tokens
-      (match-operator tokens)
-    =^  rock  tokens
-      (match-inner-jock tokens)
-    [[%operator op lock `rock] tokens]
-  ::  no infix operator
-  [lock tokens]
+    ~|("range indexing not yet supported" !!)
+  ?>  (got-punctuator -.tokens %']')
+  ::  desugar to hoon.snag(idx lock)
+  =/  snag-call=jock
+    :+  %call
+      [%limb ~[[%name %hoon] [%name %snag]]]
+    `[idx lock]
+  ::  loop to allow chaining: list[0][1]
+  $(lock snag-call, tokens +.tokens)
 ::
 ++  match-pair-inner-jock
   |=  =tokens
