@@ -81,6 +81,7 @@
       %import
       %as
       %print
+      %unary
   ==
 ::
 +$  jpunc
@@ -196,7 +197,7 @@
         %object  %if  %else  %crash  %assert
         %compose  %loop  %defer
         %recur  %match  %switch  %eval  %with  %this
-        %import  %as  %print
+        %import  %as  %print  %unary
         :: %for
     ==
   ::
@@ -429,7 +430,7 @@
       [%struct name=cord fields=(list [name=term type=jype])]
       [%struct-literal name=cord vals=(map term jock)]
       :: [%impl]
-      [%trait name=cord methods=(list term) op=(unit operator)]
+      [%trait name=cord methods=(list term) op=(unit operator) unary=?]
       :: [%union]
       [%alias name=cord target=cord]
       [%class state=jype arms=(map term jock) traits=(list cord)]
@@ -553,7 +554,7 @@
       ::  %struct is a product type with named fields
       [%struct name=cord fields=struct-fields]
       ::  %trait is a compile-time trait definition
-      [%trait name=cord methods=(list term) op=(unit operator)]
+      [%trait name=cord methods=(list term) op=(unit operator) unary=?]
       ::  %none is a null type (as for undetermined variable labels)
       [%none p=(unit term)]
   ==
@@ -801,7 +802,19 @@
   ?.  ?=(%punctuator -.first)
     ~|("expect start-punctuator. token: {<-.first>}" !!)
   =.  tokens  +.tokens
-  ?+    +.first  ~|("expect start-punctuator. token: {<+.first>}" !!)
+  ?+    +.first
+    ::  Default: check for unary prefix operator at expression start
+    ?.  (~(has in operator-set) +.first)
+      ~|("expect start-punctuator. token: {<+.first>}" !!)
+    =/  op=operator  ;;(operator +.first)
+    =^  operand  tokens
+      ?+    -<.tokens  ~|('unary operator: expected operand' !!)
+          %literal     (match-literal tokens)
+          %name        (match-start-name tokens)
+          %punctuator  (match-start-punctuator tokens)
+          %type        (match-start-name tokens)
+      ==
+    [[%operator op operand ~] tokens]
   ::  Increment  +(0)
       %'+'
     =^  jock  tokens
@@ -1120,25 +1133,34 @@
   ::
   ::  trait Arithmetic { add; neg; }
   ::  trait Add(+) { add; }
-  ::  [%trait name=cord methods=(list term) op=(unit operator)]
+  ::  [%trait name=cord methods=(list term) op=(unit operator) unary=?]
       %trait
     =/  name=cord
       ~|  'trait: expected trait name'
       (got-type -.tokens)
     =.  tokens  +.tokens
     ::  Optional operator mapping: trait Add(+) { ... }
+    ::  Or unary: trait Neg(unary ⊖) { neg; }
     =|  op=(unit operator)
-    =^  op  tokens
+    =|  unary=?
+    =^  op-uni  tokens
       ::  Check for (( which is what ( becomes after a type name
-      ?.  (has-punctuator -.tokens %'((')  [~ tokens]
+      ?.  (has-punctuator -.tokens %'((')  [[~ %.n] tokens]
       =.  tokens  +.tokens
+      ::  Check for optional 'unary' keyword
+      =/  is-unary=?
+        ?:  (has-keyword -.tokens %unary)  %.y
+        %.n
+      =?  tokens  is-unary  +.tokens
       =/  tok=token  -.tokens
       ?>  ?=([%punctuator *] tok)
       ?>  (~(has in operator-set) +.tok)
       =.  tokens  +.tokens
       ?>  (got-punctuator -.tokens %')')
       =.  tokens  +.tokens
-      [`;;(operator +.tok) tokens]
+      [[`;;(operator +.tok) is-unary] tokens]
+    =.  op  -.op-uni
+    =.  unary  +.op-uni
     ?>  (got-punctuator -.tokens %'{')
     =.  tokens  +.tokens
     =|  methods=(list term)
@@ -1152,7 +1174,7 @@
       ?>  (got-punctuator -.tokens %';')
       =.  tokens  +.tokens
       $(methods [method-name methods])
-    [[%trait name methods op] tokens]
+    [[%trait name methods op unary] tokens]
   ::
   ::  struct Point { x: Real, y: Real };
   ::  [%struct name=cord fields=(list [name=term type=jype])]
@@ -2170,7 +2192,7 @@
       [[%8 val [%0 1]] (~(cons jt alias-jyp) jyp)]
     ::
         %trait
-      =/  trait-jyp=jype  [[%trait name.j methods.j op.j] name.j]
+      =/  trait-jyp=jype  [[%trait name.j methods.j op.j unary.j] name.j]
       [[%8 [%1 0] [%0 1]] (~(cons jt trait-jyp) jyp)]
     ::
         %struct
@@ -2804,8 +2826,7 @@
       ~|  %operator
       ::  Check for operator overloading on class instances
       =/  op-method=(unit term)
-        ::  Only binary ops on variable references
-        ?~  b.j  ~
+        ::  Binary or unary ops on variable references
         ?.  ?=(%limb -.a.j)  ~
         ::  Look up variable type
         =/  lim  (~(get-limb jt jyp) p.a.j)
@@ -2814,16 +2835,18 @@
         =/  typ=jype  p.p.u.lim
         ::  Check if type is a struct (class instance state)
         ?.  ?&(?=(@ -<.typ) ?=(%struct -.p.typ))  ~
-        ::  Walk jype for a trait with this operator
-        =<  (find-op jyp op.j)
+        ::  Walk jype for a trait with this operator and arity
+        =/  is-unary=?  =(~ b.j)
+        =<  (find-op jyp op.j is-unary)
         |%
         ++  find-op
-          |=  [j=jype op=operator]
+          |=  [j=jype op=operator is-unary=?]
           ^-  (unit term)
           ?:  ?=(@ -<.j)
-            ::  Leaf node: check if it's a trait with matching op
+            ::  Leaf node: check if it's a trait with matching op and arity
             ?.  ?=(%trait -.p.j)  ~
             ?.  =(`op op.p.j)  ~
+            ?.  =(is-unary unary.p.j)  ~
             ?~  methods.p.j  ~
             `i.methods.p.j
           ::  Cell node: search left then right
@@ -2832,10 +2855,17 @@
           $(j ->.j)
         --
       ?^  op-method
-        ::  Rewrite: p + q  ->  p.method(q)
         ?>  ?=(%limb -.a.j)
+        ?~  b.j
+          ::  Unary overload: ⊖x -> x.neg()
+          =/  j=jock  [%call [%limb (snoc p.a.j [%name u.op-method])] arg=~]
+          $(j j)
+        ::  Binary overload: x + y -> x.add(y)
         =/  j=jock  [%call [%limb (snoc p.a.j [%name u.op-method])] arg=b.j]
         $(j j)
+      ::  If unary and no overload found, crash
+      ?~  b.j
+        ~|('unary operator requires trait overload' !!)
       ::  Standard operator: returns atom type
       :_  [%atom %number %.n]^%$
       ?-    op.j
