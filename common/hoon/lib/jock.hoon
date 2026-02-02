@@ -2092,6 +2092,7 @@
         %let
       ~|  %let-value
       =+  [val val-jyp]=$(j val.j)
+      ~&  [%let-debug name.type.j val-jyp]
       =.  jyp
         ::  let permits four correct cases:
         ::  1. let name = value;
