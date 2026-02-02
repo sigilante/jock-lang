@@ -2092,7 +2092,6 @@
         %let
       ~|  %let-value
       =+  [val val-jyp]=$(j val.j)
-      ~&  [%let-debug name.type.j val-jyp]
       =.  jyp
         ::  let permits four correct cases:
         ::  1. let name = value;
@@ -2229,10 +2228,14 @@
       ::  If the name resolves to a class (cell jype-leaf, not atom tag),
       ::  extract the struct from the %state wrapper inside the class type.
       =.  styp
-        ?:  ?=(@ -<.styp)  styp
-        ::  Class type: jype-leaf is [state-jype core-jype]
-        ::  state-jype head is [[%state inner-struct-jype] name]
-        ::  -<-<.styp = %state tag, -<->.styp = inner-struct-jype
+        ?:  ?=(@ -<.styp)
+          ?.  ?=(%core -.p.styp)  styp
+          ::  Class core: extract struct from core context
+          =/  sta=jype  (need q.p.styp)
+          ?>  ?=(@ -<.sta)
+          ?>  ?=(%state -.p.sta)
+          p.p.sta
+        ::  Cell jype (legacy path)
         ?>  ?=(%state -<-<.styp)
         -<->.styp
       ?>  ?=(@ -<.styp)
@@ -2340,10 +2343,8 @@
       |-  ^-  [nock jype]
       ?~  lis
         :-  [%8 sam-nok [%1 cor-nok] [%0 1]]  :: XXX for subject
-        =/  inner-jyp
-          (~(cons jt state.j) [[%core %|^cor-jyp `state.j] name.state.j])
-        =.  inner-jyp  inner-jyp(name name.state.j)
-        (~(cons jt inner-jyp) jyp)
+        =/  core-jyp=jype  [[%core %|^cor-jyp `state.j] name.state.j]
+        (~(cons jt core-jyp) (~(cons jt state.j) jyp))
       =+  [mor-nok mor-jyp]=%=(^$ j val.i.lis, jyp exe-jyp)
       %_  $
         lis      t.lis
@@ -2586,60 +2587,11 @@
           =+  [arg arg-jyp]=$(j u.arg.j, jyp old-jyp)
           [%9 2 %10 [6 [%7 [%0 3] arg]] %0 2]
         ::
-        ::  class constructor (case 2), multiple arguments
+        ::  class constructor or method call
         ::  [%call func=[%limb p=(list jlimb)] arg=(unit jock)]
-        ::    Type(state)
         ?^  -<.typ
-          ?:  ?=(%type -<.limbs)
-            ?~  arg.j  ~|("expect method argument" !!)
-            =+  [val val-jyp]=$(j u.arg.j)
-            ::  This is a class, so we know that the state is at the head.
-            ?>  ?=(%state -<-<.typ)
-            =/  inferred-type  (~(unify jt -<->.typ) val-jyp)
-            ?~  inferred-type
-              ~|  '%call: argument value type does not nest in method type'
-              ~|  "have: {<val-jyp>}\0aneed: {<typ>}"
-              !!
-            =.  inferred-type  `u.inferred-type(name ->.limbs)
-            :_  u.inferred-type
-            :+  %8
-              ::  parent of axis
-              [%0 (div ;;(@ +:(resolve-wing ljw)) 2)]
-            :+  %10
-              [6 %7 [%0 3] val]
-            [%0 2]
-          ::
-          ?>  ?=(%name -<.limbs)
-          ?~  arg.j  ~|("expect method argument" !!)
-          =+  [val val-jyp]=$(j u.arg.j)
-          =/  inferred-type  (~(unify jt typ) val-jyp)
-          ?~  inferred-type
-            ~|  '%call: argument value type does not nest in method type'
-            ~|  "have: {<val-jyp>}\0aneed: {<typ>}"
-            !!
-          =.  inferred-type  `u.inferred-type(name ->.limbs)
-          :-  val
-          u.inferred-type
-        ::
-        ::  class method call by constructor (case 2), single argument
-        ::    [%call func=[%limb p=(list jlimb)] arg=(unit jock)]
-        ::    Type(state)
+          ~|("unexpected cell-headed jype in call dispatch" !!)
         ?.  ?=(%core -.p.typ)
-          ?:  ?=(%type -<.limbs)
-            ~|  %call-case-2
-            ::  XXX possibly unused now
-            ?>  ?=(%type -<.limbs)
-            ?~  arg.j  ~|("expect constructor state argument" !!)
-            =+  [val val-jyp]=$(j u.arg.j)
-            ::  XXX this checks to make sure state and input actually nest
-            =/  inferred-type  (~(unify jt typ) val-jyp)
-            ?~  inferred-type
-              ~|  '%call: argument value type does not nest in method type'
-              ~|  "have: {<val-jyp>}\0aneed: {<typ>}"
-              !!
-            =.  inferred-type  `u.inferred-type
-            :-  val
-            [[%limb limbs] ->.limbs]
           ?>  ?=(%name -<.limbs)
           ?>  ?=(%limb -.p.typ)
           ::  Get class definition for instance.  This is a cons of
@@ -2649,9 +2601,9 @@
           ?>  ?=(%& -.u.lim)
           =/  dyp=jype  p.p.u.lim
           =/  ljd=(list jwing)  q.p.u.lim
-          =/  cyp  ;;(jype ->.dyp)
-          ?>  ?=(%core -<.cyp)
-          ?:  ?=(%& -.p.p.cyp)  ~|("class cannot be lambda" !!)
+          ?>  ?=(@ -<.dyp)
+          ?>  ?=(%core -.p.dyp)
+          ?:  ?=(%& -.p.p.dyp)  ~|("class cannot be lambda" !!)
           ::  Search for the door defn in the subject jype.
           =/  gat-nom  `cord`+<+.limbs
           ::  Strip name from class def so axis-at-name can recurse
@@ -2661,9 +2613,10 @@
             ~|  %call-case-7
             ::  Getter for state variables.
             ::    instance.state()
-            =/  sta  -<.dyp
-            ?>  ?=(%state -<.sta)
-            =/  stn  p.p.sta
+            =/  sta=jype  (need q.p.dyp)
+            ?>  ?=(@ -<.sta)
+            ?>  ?=(%state -.p.sta)
+            =/  stn  p.sta
             =/  ljs  (~(get-limb jt +.stn) +.limbs)
             ?~  ljs  ~|('leg not found' !!)
             :_  *jype
@@ -2681,11 +2634,11 @@
           ?>  ?=(%& -.u.gat-lim)
           =/  gat-jyp=jype  p.p.u.gat-lim
           =/  ljg=(list jwing)  q.p.u.gat-lim
-          =/  gat  (~(get by p.p.p.cyp) gat-nom)
+          =/  gat  (~(get by p.p.p.dyp) gat-nom)
           ?~  gat  ~|("gate not found: {<gat-nom>} in {<name.typ>}" !!)
           ?>  ?=(%core -<.u.gat)
           ?.  ?=(%& -.p.p.u.gat)  ~|("method cannot be lambda" !!)
-          =/  dor-nom  -<+.dyp  :: class name, used to determine return type
+          =/  dor-nom  +.dyp  :: class name, used to determine return type
           =/  method-inp=(unit jype)  inp.p.p.p.u.gat
           :: Output is a regular type.
           ^-  [nock jype]
@@ -2743,6 +2696,27 @@
           :+  %10
             [6 state-nock]
           [%0 2]
+        ::  Class core. Constructor or method call?
+        ?:  ?=(%type -<.limbs)
+          ::  Constructor: Type(args)
+          ?~  arg.j  ~|("expect method argument" !!)
+          =+  [val val-jyp]=$(j u.arg.j)
+          =/  sta=jype  (need q.p.typ)
+          ?>  ?=(@ -<.sta)
+          ?>  ?=(%state -.p.sta)
+          =/  struct-jyp  p.p.sta
+          =/  inferred-type  (~(unify jt struct-jyp) val-jyp)
+          ?~  inferred-type
+            ~|  '%call: argument value type does not nest in method type'
+            ~|  "have: {<val-jyp>}\0aneed: {<typ>}"
+            !!
+          =.  inferred-type  `u.inferred-type(name ->.limbs)
+          :_  u.inferred-type
+          :+  %8
+            [%0 (div ;;(@ +:(resolve-wing ljw)) 2)]
+          :+  %10
+            [6 %7 [%0 3] val]
+          [%0 2]
         ::
         ::  traditional function call (case 1)
         ::    func(args)
@@ -2766,7 +2740,7 @@
         ::
         ::  lambda function call (case 4)
         ::    lambda(args)->out{}
-        ?>  &(=(1 (lent p.func.j)) !?=(%type -<.limbs))
+        ?>  =(1 (lent p.func.j))
         ~|  %call-case-4
         :_  =/  gat  ;;([%core p=core-body q=(unit jype)] -:(~(got by p.p.p.typ) +:(snag 0 p.func.j)))
             ?>  ?=(%& -.p.gat)
