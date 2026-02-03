@@ -451,6 +451,7 @@
       [%increment val=jock]
       [%cell-check val=jock]
       [%call func=jock arg=(unit jock)]
+      [%index expr=jock idx=jock]
       [%compare comp=comparator a=jock b=jock]
       [%limb p=(list jlimb)]
       [%atom p=jatom]
@@ -669,13 +670,11 @@
       ==
     ~|("range indexing not yet supported" !!)
   ?>  (got-punctuator -.tokens %']')
-  ::  desugar to hoon.snag(idx lock)
-  =/  snag-call=jock
-    :+  %call
-      [%limb ~[[%name %hoon] [%name %snag]]]
-    `[idx lock]
-  ::  loop to allow chaining: list[0][1]
-  $(lock snag-call, tokens +.tokens)
+  ::  emit %index node
+  =/  index-expr=jock
+    [%index lock idx]
+  ::  loop to allow chaining: a[0][1]
+  $(lock index-expr, tokens +.tokens)
 ::
 ++  match-inner-jock
   |=  =tokens
@@ -766,13 +765,11 @@
       ==
     ~|("range indexing not yet supported" !!)
   ?>  (got-punctuator -.tokens %']')
-  ::  desugar to hoon.snag(idx lock)
-  =/  snag-call=jock
-    :+  %call
-      [%limb ~[[%name %hoon] [%name %snag]]]
-    `[idx lock]
-  ::  loop to allow chaining: list[0][1]
-  $(lock snag-call, tokens +.tokens)
+  ::  emit %index node
+  =/  index-expr=jock
+    [%index lock idx]
+  ::  loop to allow chaining: a[0][1]
+  $(lock index-expr, tokens +.tokens)
 ::
 ++  match-pair-inner-jock
   |=  =tokens
@@ -2138,6 +2135,46 @@
       =+  [q q-jyp]=$(j q.j)
       [[p q] (~(cons jt p-jyp) q-jyp)]
     ::
+        %index
+      ::  First, compile the expression to determine its type.
+      =+  [expr-nock expr-jyp]=$(j expr.j)
+      ::  Reject fork types.
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%fork -.p.expr-jyp)
+          ==
+        ~|("cannot index into a union type; use match first" !!)
+      ::  List: generate hoon.snag call nock directly.
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%list -.p.expr-jyp)
+          ==
+        ::  Look up hoon library in jype context
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        ::  Build Hoon AST for snag and validate
+        =+  ast=(j2h ~[[%name %snag]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  pjyp  (type2jype p.min)
+        =/  qmin
+          ~|  'failed to validate snag Nock'
+          ;;(nock q.min)
+        ::  Compile the argument (idx, expr) pair
+        =+  [arg arg-jyp]=$(j [idx.j expr.j])
+        :_  pjyp
+        ;;  nock
+        :+  %8
+          :^  %9  +<+<.qmin  %0  -.ljw
+        [%9 2 %10 [6 [%7 [%0 3] arg]] %0 2]
+      ::  Tuple (cell jype): compute axis at compile time.
+      ::  Index must be a literal number.
+      =/  n=@  (get-index-number idx.j)
+      =/  [ax=@ res-jyp=jype]  (tuple-axis n expr-jyp)
+      :_  res-jyp
+      [%7 expr-nock [%0 ax]]
+    ::
         %let
       ~|  %let-value
       =+  [val val-jyp]=$(j val.j)
@@ -3106,6 +3143,32 @@
       ~|  %crash
       [[%0 0] jyp]
     ==
+  ::
+  ++  get-index-number
+    |=  j=jock
+    ^-  @
+    ~|  "tuple index must be a literal number"
+    ?>  ?=([%atom *] j)
+    =/  a=jatom  p.j
+    ?>  ?=([%number *] -.a)
+    p.-.a
+  ::
+  ++  tuple-axis
+    |=  [n=@ typ=jype]
+    ^-  [@ jype]
+    ?@  -<.typ  !!
+    ::  index 0: return head
+    ?:  =(0 n)
+      [2 p.typ]
+    ::  check if tail is a cell jype (more tuple elements)
+    ?@  -<.q.typ
+      ::  tail is a leaf: index 1 = tail (last element)
+      ?>  =(1 n)
+      [3 q.typ]
+    ::  tail is a cell: recurse, compose axis via peg
+    =/  [inner-ax=@ inner-jyp=jype]
+      $(n (dec n), typ `jype`q.typ)
+    [(peg 3 inner-ax) inner-jyp]
   ::
   ++  mint-after-if
     |=  j=after-if-expression
