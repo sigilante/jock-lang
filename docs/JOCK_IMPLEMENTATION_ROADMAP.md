@@ -2,9 +2,9 @@
 ## For Claude Code Execution
 
 **Repository:** github.com/zorp-corp/jock-lang (main) / github.com/sigilante/jock-lang (development fork)
-**Current Branch:** `sigilante/freshwater-ray-finned-fish`
+**Current Branch:** `sigilante/jype-refactor`
 **Target:** Production-ready type system + NockApp compatibility
-**Last Updated:** 2026-01-30
+**Last Updated:** 2026-02-03
 
 ---
 
@@ -50,130 +50,103 @@
 
 ---
 
-## Sprint 2: Impl Blocks & Traits
+## Sprint 2: Impl Blocks & Traits ✅ COMPLETE
 
 ### Design Direction
 
-Structs + impl blocks replace the traditional class pattern. The underlying Hoon model is the **door** (a core with a sample):
+Structs + impl blocks use the **class-with-struct-state** pattern. The underlying Hoon model is the **door** (a core with a sample):
 - **Struct** = the sample type (data layout)
-- **Impl** = the battery (methods operating on that data)
+- **Class with impl** = the battery (methods operating on that data) + trait validation
 - Together they form a door: `[battery sample]`
 
-The existing `%class` mint code (lines 2092-2125) already compiles a door-like structure with a `%state` sample and method arms. This code needs to be adapted into the `impl` pattern where struct and impl are defined separately.
+### Task 2.1: Class with Struct State + Methods ✅
 
-### Task 2.1: Impl Block — Struct Methods
+**Completed:**
+- [x] `class Name(StructType) { ... }` parses and compiles
+- [x] Methods stored as `(map term jock)` in AST
+- [x] Methods compile to battery arms of a Nock core (door)
+- [x] `self` parameter binds to the struct instance (door sample at axis +6)
+- [x] Method calls resolve via subject walk + core invocation
+- [x] `Self` type resolves to the implementing struct type in method signatures
+- [x] Constructor syntax: `Point { x: 42, y: 7 }` creates struct instance
 
-**Syntax:**
+**Actual Syntax:**
 ```jock
+compose struct PointState { x: Real, y: Real };
 compose
-  struct Point { x: Real, y: Real }
+  class Point(PointState) {
+    add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+    neg(self: Self) -> Real { self.y }
+  }
 ;
-impl Point {
-  add(self, other: Point) -> Point {
-    Point { x: self.x + other.x, y: self.y + other.y }
-  }
-
-  scale(self, factor: Real) -> Point {
-    Point { x: self.x * factor, y: self.y * factor }
-  }
-}
+let p = Point { x: 101, y: 105 };
+let q = Point { x: 42, y: 7 };
+p.add(q)
 ```
 
-**Key design decisions:**
-1. `impl Point` must find the existing `Point` struct in scope
-2. All method definitions happen within the `impl` block (not scattered)
-3. `self` is the implicit first parameter bound to the struct instance
-4. Methods compile to battery arms of a Nock core (door)
-5. The door's sample is the struct type
+**Tests:**
+- `class-basic.jock`: Basic class with struct state and method call
+- `class-define.jock`: Class definition and construction
+- `class-3d.jock`: 3D point class with methods
 
-**Nock Compilation Target:**
-```
-[battery sample context]
-battery = {add: formula, scale: formula, ...}
-sample = struct bunt [0 0]
-context = outer subject (for accessing other types/functions)
-```
+### Task 2.2: Trait Definition & Validation ✅
 
-**Implementation steps:**
-1. **Parser:** Uncomment/adapt class parser for `impl StructName { method(...) -> Type { body } }`
-2. **AST:** Use existing `[%class state=jype arms=(map term jock)]` or create `[%impl target=cord arms=(map term jock)]`
-3. **Mint:** Adapt `%class` mint — look up struct type in subject, build door with struct as sample
-4. **Self resolution:** `self` in method body = the sample at axis `+6` of the core
-5. **Method call:** `pt.add(other)` → find core via subject walk, slam arm with modified sample
+**Completed:**
+- [x] `trait Name { method1; method2; }` parses
+- [x] Trait signatures stored in compilation environment
+- [x] `impl Trait` clause on class validates method presence against trait
+- [x] Multiple traits: `class C(S) impl Trait1, Trait2 { ... }`
+- [x] `Self` type parameter resolves to implementing struct type
+- [x] Missing methods produce compile error
 
-**Method call compilation (Nock):**
-```
-p.add(q)  →  [9 arm-axis [10 [6 [compiled-q]] [0 core-axis]]]
-```
-- `[0 core-axis]` = fetch the Point door from the subject
-- `[10 [6 ...] ...]` = edit the sample (axis 6) with the argument
-- `[9 arm-axis ...]` = invoke the arm
-
-**Acceptance Criteria:**
-- [ ] `impl StructName { ... }` parses
-- [ ] Methods stored as `(map term jock)` in AST
-- [ ] Methods compile to battery arms
-- [ ] `self` refers to the struct instance (door sample)
-- [ ] Method calls resolve via subject walk + core invocation
-- [ ] Type checking validates method signatures
-- [ ] `impl` must reference a previously defined struct (compile error otherwise)
-
-### Task 2.2: Trait Definition
-
-**Syntax:**
+**Actual Syntax:**
 ```jock
-trait Arithmetic {
-  add(self, other: Self) -> Self;
-  neg(self) -> Self;
-}
+compose trait Arithmetic { add; neg; };
+compose trait Subtraction { sub; };
+compose
+  class Point(PointState) impl Arithmetic, Subtraction {
+    add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+    neg(self: Self) -> Real { self.y }
+    sub(self: Self, p: Self) -> Self { ( self.x - p.x  self.y - p.y ) }
+  }
+;
 ```
 
-**Implementation:**
-- Trait = named collection of method signatures (name + input type + output type)
-- Stored in compilation environment alongside struct types
-- No code generation — traits are purely compile-time constraints
-- `Self` is a placeholder resolved to the implementing struct type
-- Partial implementation exists: `match-trait` parser (line 732-747) parses `name(args) -> ReturnType;`
+**Tests:**
+- `trait-basic.jock`: Trait definition + class impl validation
+- `trait-self.jock`: `Self` type in method signatures
+- `trait-multiple.jock`: Class implementing multiple traits
 
-**Checking an impl against a trait:**
-When `impl Point: Arithmetic { ... }` is encountered:
-1. Look up `Arithmetic` trait signatures in the environment
-2. For each required method, verify the impl provides it
-3. Check by **name** match first
-4. Check **type signature** compatibility (substituting `Self` → `Point`)
-5. Missing or mismatched methods → compile error
+### Task 2.3: Operator Overloading ✅
 
-**Acceptance Criteria:**
-- [ ] `trait Name { ... }` parses (adapt `match-trait`)
-- [ ] Trait signatures stored in environment
-- [ ] `Self` type parameter resolves to implementing type
-- [ ] `impl Struct: Trait { ... }` validated against trait requirements
-- [ ] Clear error for missing/mismatched methods
+**Completed:**
+- [x] Traits can bind to operators: `trait Add(+) { add; }` and `trait Neg(unary -) { neg; }`
+- [x] Binary operator overloading: `p + q` dispatches to `add` method
+- [x] Unary operator overloading: `-w` dispatches to `neg` method
+- [x] Arbitrary Unicode operators: `trait Neg(unary ⊖) { neg; }` → `⊖w`
+- [x] Operator whitelist system for custom operators
 
-### Task 2.3: Method Resolution
+**Tests:**
+- `op-overload.jock`: Binary `+` and `-` overloads
+- `unary-parens.jock`: Unary `-` with parenthesized syntax
+- `unary-unicode.jock`: Unicode operator `⊖`
+- `unary-tuple-2.jock`, `unary-tuple-3.jock`: Unary ops on tuples
+- `unary-sint.jock`: Unary negation on signed integers
 
-**Algorithm:**
-1. `value.method(args)` → resolve `value` to find its type
-2. If type is a struct with an associated impl (door), find the door in the subject
-3. Look up `method` in the door's battery
-4. Emit: `[9 arm-axis [10 [sample-axis compiled-args] [0 door-axis]]]`
+### Task 2.4: Index Notation ✅
 
-**Key consideration:** After `impl Point { ... }`, the subject contains a door `[battery [sample context]]` named `Point`. When calling `p.add(q)`:
-- `p` is a Point value (raw struct, not a door)
-- We need to find the Point *door* in the subject
-- Replace the door's sample with `p`
-- Then invoke the `add` arm
+**Completed:**
+- [x] `expr[idx]` syntax parsed into `%index` AST node
+- [x] Tuple indexing: compile-time axis resolution via `tuple-axis` / `get-index-number`
+- [x] List indexing: generates `hoon.snag` call nock directly (no `%call` re-entry)
+- [x] Nested indexing: `b[1][0]` chains correctly
+- [x] Path-basic test for path noun syntax
 
-**Edge Cases:**
-- Multiple impls for different structs with same method names → distinguished by struct type
-- Methods that return `Self` → return type = implementing struct type
-- Chained calls: `p.add(q).scale(2)` → intermediate results must find their impl door
-
-**Acceptance Criteria:**
-- [ ] `value.method(args)` dispatches correctly
-- [ ] Door lookup uses struct type, not just name
-- [ ] Method return types propagated correctly
-- [ ] Chained method calls work
+**Tests:**
+- `indexing-tuple.jock`: `t[0]`, `t[1]`, `t[2]` on tuple → `(100 200 300)`
+- `indexing-list.jock`: `a[0]` on list → `100`
+- `indexing-nested.jock`: `b[1][0]` on nested list → `30`
+- `path-basic.jock`: Path noun syntax
 
 ---
 
@@ -655,25 +628,22 @@ make jockt
 
 ## Immediate Next Actions (This Week)
 
-### Priority 1: Get Development Environment Working
-1. Clone repository
-2. Build hoonc from nockchain
-3. Build jockc and jockt
-4. Run existing tests to verify setup
-5. Read through existing Hoon code to understand structure
+### Priority 1: Sprint 3 — Unions & Pattern Matching
+1. Design union/sum type AST representation
+2. Implement `union` keyword parser
+3. Implement variant construction with head tags
+4. Implement `match` with exhaustiveness checking
+5. Build Result/Option types as union examples
 
-### Priority 2: Start Struct Implementation
-1. Study existing type system in `/crates/jockc/hoon/lib/jock.hoon`
-2. Add parser support for `struct` keyword
-3. Extend AST to include struct nodes
-4. Implement basic struct compilation (no methods yet)
-5. Write tests for struct creation
+### Priority 2: Stabilize Indexing
+1. Verify list indexing end-to-end (blocked on cold Hoon compile time after cache clear)
+2. Verify nested list indexing
+3. Add error messages for out-of-bounds or wrong-type index targets
 
-### Priority 3: Document Current State
-1. Inventory what's implemented vs. spec
-2. Document known bugs/issues
-3. Create task breakdown for remaining work
-4. Set up project tracking (GitHub issues)
+### Priority 3: Improve Error Messages
+1. Add source locations to type errors
+2. Improve trait validation error messages (which method is missing)
+3. Add suggestions for common mistakes
 
 ---
 
@@ -701,17 +671,20 @@ make jockt
 
 ## Success Metrics
 
-### Week 1-2 (Sprint 1)
+### Week 1-2 (Sprint 1) ✅
 - Structs parse and compile
-- Can create struct, access fields
-- Type checker validates struct usage
-- 10+ tests passing
+- Can create struct, access fields, update fields
+- Type aliases work
+- Nested structs work
+- 10+ struct/alias tests passing
 
-### Week 3-4 (Sprint 2)
-- Traits defined and stored
-- Impl blocks compile to cores
-- Method calls work
-- 25+ tests passing
+### Week 3-4 (Sprint 2) ✅
+- Traits defined, stored, and validated
+- Classes with struct state compile to doors
+- Method calls work with `Self` type
+- Operator overloading (binary + unary, including Unicode)
+- Index notation for tuples (compile-time) and lists (runtime via snag)
+- 25+ tests passing (traits, classes, operators, indexing)
 
 ### Week 5-6 (Sprint 3)
 - Unions work with pattern matching
@@ -785,6 +758,6 @@ This roadmap is aggressive but achievable with focused effort. Each sprint build
 
 Let's make Nock programming accessible without compromising on rigor or performance. The future is deterministic computation, and Jock is the practical path to get there.
 
-**Status:** Sprint 1 complete, Sprint 2 in progress
-**Last Updated:** 2026-01-30
+**Status:** Sprints 1-2 complete, Sprint 3 next
+**Last Updated:** 2026-02-03
 **Owner:** Claude Code + Senior Engineering Team

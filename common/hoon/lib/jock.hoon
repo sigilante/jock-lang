@@ -452,6 +452,7 @@
       [%cell-check val=jock]
       [%call func=jock arg=(unit jock)]
       [%index expr=jock idx=jock]
+      [%cast mode=?(%as %as-q %as-x) expr=jock target=jype]
       [%compare comp=comparator a=jock b=jock]
       [%limb p=(list jlimb)]
       [%atom p=jatom]
@@ -637,7 +638,20 @@
   |-
   ?:  =(~ tokens)  [lock tokens]
   ?.  (has-punctuator -.tokens %'[')
-    ::  not indexing, fall through to operator checks
+    ::  not indexing, fall through to cast/operator checks
+    ::  - cast (as, as?, as!)
+    ?:  (has-keyword -.tokens %as)
+      =.  tokens  +.tokens  :: skip 'as' keyword
+      =/  mode=?(%as %as-q %as-x)
+        ?:  &(!=(~ tokens) (has-punctuator -.tokens %'?'))
+          %as-q
+        ?:  &(!=(~ tokens) (has-punctuator -.tokens %'!'))
+          %as-x
+        %as
+      =?  tokens  !=(%as mode)  +.tokens  :: skip '?' or '!'
+      =^  target  tokens
+        (match-jype tokens)
+      $(lock [%cast mode lock target])
     =^  oc=(unit term)  tokens
       (any-operator tokens)
     ?~  oc  [lock tokens]
@@ -706,8 +720,21 @@
           !?=(%list -.lock)
           !?=(%set -.lock)
       ==
-    ::  not indexing, fall through to comparator/operator checks
+    ::  not indexing, fall through to cast/comparator/operator checks
     ?:  =(~ tokens)  [lock tokens]
+    ::  - cast (as, as?, as!)
+    ?:  (has-keyword -.tokens %as)
+      =.  tokens  +.tokens  :: skip 'as' keyword
+      =/  mode=?(%as %as-q %as-x)
+        ?:  &(!=(~ tokens) (has-punctuator -.tokens %'?'))
+          %as-q
+        ?:  &(!=(~ tokens) (has-punctuator -.tokens %'!'))
+          %as-x
+        %as
+      =?  tokens  !=(%as mode)  +.tokens  :: skip '?' or '!'
+      =^  target  tokens
+        (match-jype tokens)
+      $(lock [%cast mode lock target])
     ::  - compare ('==','<','<=','>','>=','!=' is the next token)
     ?:  ?|  &((has-punctuator -.tokens %'=') (has-punctuator +<.tokens %'='))
             (has-punctuator -.tokens %'<')
@@ -1458,12 +1485,21 @@
   ^-  [jype (list token)]
   ?:  =(~ tokens)
     ~|("expect jype. token: ~" !!)
+  ::  Option type  ?T
+  ?:  &(!=(~ tokens) (has-punctuator -.tokens %'?'))
+    ?.  &(!=(~ +.tokens) ?=(%type -<.+.tokens))
+      ~|("expect type after '?' for option type" !!)
+    =/  rest=(list token)  +.tokens  :: skip '?'
+    =^  inner-jype  rest
+      (match-jype rest)
+    :_  rest
+    [[%fork [%none ~]^%$ inner-jype] %$]
   ::  Store name and strip it from token list
   =/  has-name  ?=(^ (get-name -.tokens))
   =/  nom  (fall (get-name -.tokens) %$)
   =?  tokens  has-name  +.tokens
   ::  Type-qualified name  b:a
-  ?:  &(has-name (has-punctuator -.tokens %':'))
+  ?:  &(has-name !=(~ tokens) (has-punctuator -.tokens %':'))
     ?:  =(%type +<-.tokens)
       =^  jyp  tokens
         (match-metatype `(list token)`+.tokens)
@@ -1472,7 +1508,7 @@
       (match-jype +.tokens)
     [jyp(name nom) tokens]
   ::  Tuple cell  (a b)
-  ?:  (has-punctuator -.tokens %'(')
+  ?:  &(!=(~ tokens) (has-punctuator -.tokens %'('))
     =^  r=(pair jype (unit jype))  tokens
       %+  match-block  [tokens %'(' %')']
       |=  =^tokens
@@ -2174,6 +2210,49 @@
       =/  [ax=@ res-jyp=jype]  (tuple-axis n expr-jyp)
       :_  res-jyp
       [%7 expr-nock [%0 ax]]
+    ::
+        %cast
+      ::  Compile the source expression
+      =+  [val val-jyp]=$(j expr.j)
+      ::  Resolve target type (may be a %limb reference to a struct/alias)
+      =/  tgt=jype  target.j
+      =.  tgt
+        ?.  &(?=(@ -<.tgt) ?=(%limb -.p.tgt))  tgt
+        =/  lim  (~(get-limb jt jyp) p.p.tgt)
+        ?~  lim  ~|("cast target type not found" !!)
+        ?>  ?=(%& -.u.lim)
+        p.p.u.lim
+      ?-  mode.j
+      ::
+          %as
+        ::  Compile-time structural check only. No runtime nock.
+        ::  Unwrap structs to cell shape for structural comparison.
+        =/  flat-val=jype
+          ?.  &(?=(@ -<.val-jyp) ?=(%struct -.p.val-jyp))  val-jyp
+          (struct-to-cell-jype fields.p.val-jyp)
+        =/  flat-tgt=jype
+          ?.  &(?=(@ -<.tgt) ?=(%struct -.p.tgt))  tgt
+          (struct-to-cell-jype fields.p.tgt)
+        ?~  (~(unify jt flat-tgt) flat-val)
+          ~|  'as: types are not structurally compatible'
+          ~|  "have: {<val-jyp>}\0aneed: {<tgt>}"
+          !!
+        [val tgt]
+      ::
+          %as-x
+        ::  Runtime mold check, crash on failure.
+        ::  Push val onto subject (axis 2), run hunt-type check,
+        ::  if match (0): return val, if fail (1): crash.
+        =/  chk=nock  (hunt-type tgt)
+        [[%8 val [%6 chk [%0 2] [%0 0]]] tgt]
+      ::
+          %as-q
+        ::  Runtime mold check, return ?T (option).
+        ::  If match: [~ val] = [0 val]. If fail: ~ = 0.
+        =/  chk=nock  (hunt-type tgt)
+        :-  [%8 val [%6 chk [[%1 0] [%0 2]] [%1 0]]]
+        [[%fork [%none ~]^%$ tgt] %$]
+      ==
     ::
         %let
       ~|  %let-value
@@ -3404,6 +3483,14 @@
       *jype-leaf
     ==
   ::
+  :: +struct-to-cell-jype: convert struct fields to nested cell jype
+  ++  struct-to-cell-jype
+    |=  flds=struct-fields
+    ^-  jype
+    ?~  flds  [%none ~]^%$
+    ?~  t.flds  type.i.flds
+    [[type.i.flds $(flds t.flds)] %$]
+  ::
   :: +hunt-type: make a $nock to test whether jock nests in jype
   :: We check only four cases:  %none and constant %atom to
   :: bottom out, and %fork and nothing (cell) to continue.
@@ -3426,18 +3513,43 @@
       [%1 1]
     ::  atom case
     ?+    -.-.jype
-      ::  default case:  %atom, %core, %limb
+      ::  default case:  %core, %limb
         ~|((crip "hunt: can't match {<`@tas`-<.jype>}") !!)
       ::
         %atom
-      ?>  ->+.jype  ::+.+.-.jype
-      [%5 [%1 q.p.jype] %0 axis]
-      ::
-        %fork
-      ~|('hunt: can\'t match fork' !!)
+      ?:  q.p.jype
+        ::  constant atom: exact equality check
+        [%5 [%1 q.p.jype] %0 axis]
+      ::  non-constant atom: check it's an atom (not a cell)
+      ::  Nock 3: 0=cell, 1=atom. We want 0=match, 1=fail.
+      ::  So: if cell(0) -> fail(1), else -> pass(0)
+      [%6 [%3 %0 axis] [%1 1] [%1 0]]
       ::
         %none
-      ~|('hunt: can\'t match untyped' !!)
+      ::  null = 0. Check value equals 0.
+      [%5 [%1 0] %0 axis]
+      ::
+        %fork
+      ::  Match if either branch matches.
+      ::  hunt returns 0=match, 1=fail. Use Nock 6 as OR:
+      ::  if left matches (0), return 0; else try right.
+      [%6 $(jype p.p.jype) [%1 0] $(jype q.p.jype)]
+      ::
+        %list
+      ::  A list is either ~ (atom 0) or [item rest].
+      ::  Just check it's either an atom or a cell (anything is valid).
+      [%1 0]
+      ::
+        %struct
+      =/  flds  fields.p.jype
+      ?~  flds  [%1 0]
+      %=  $
+        jype  (struct-to-cell-jype flds)
+      ==
+      ::
+        %noun
+      ::  noun always matches
+      [%1 0]
     ==
   ::
   :: +hunt-value: make a $nock to test whether jock matches value
@@ -3493,6 +3605,15 @@
       "{<;;(@t +.nock)>}"
       ::
       ==
+    ::
+        %fork
+      ::  Option type (?T): fork of %none and T
+      ?:  &(?=(@ -<.p.p.jype) =(%none -.p.p.p.jype))
+        ?:  =(0 nock)
+          (crip "~")
+        $(nock ;;(^nock +.nock), jype q.p.jype)
+      ::  Generic fork: print with first branch type
+      $(jype p.p.jype)
     ::
     ==
 --

@@ -58,6 +58,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap();
 
         // Acquire file text.
+        let string = if string.ends_with(".jock") {
+            string.trim_end_matches(".jock").to_string()
+        } else {
+            string
+        };
         println!("Reading file: {}.jock", string);
         let text =
             std::fs::read_to_string(format!("{}.jock", string)).expect("Unable to read file");

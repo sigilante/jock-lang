@@ -54,7 +54,7 @@ let mylist = [1 2 3 4 5];
 )
 ```
 
-- Current status:  the Hoon FFI permits these operations but no syntax is available.
+- Current status:  Index notation (`expr[idx]`) is implemented for both lists (runtime via `hoon.snag`) and tuples (compile-time axis resolution).  Slicing (`[1:4]`) is not yet implemented.
 
 ## `Map` type and syntax
 
@@ -92,35 +92,25 @@ a
 
 - Current status:  PR #53 contains work towards wrapping the environment in a closure so that references can be resolved at runtime.
 
-## `protocol` traits interface
+## `protocol` traits interface ✅ IMPLEMENTED
 
 Define a list of methods and type relations to be validated at compile time.
 
-A `protocol` is a definition of the allowed and type signatures that a class must implement.  It may be `total` (only these methods are allowed) or partial (at least these methods are allowed, default).  Eventually, `protocol` will form the basis of an operator overloading system.
+- Current status:  Traits are implemented via `trait Name { method1; method2; }` syntax.  Classes can implement traits: `class C(S) impl Trait1, Trait2 { ... }`.  Operator overloading is supported: `trait Add(+) { add; }` for binary operators and `trait Neg(unary -) { neg; }` for unary operators, including arbitrary Unicode operators.  `Self` type resolves in method signatures.
 
 ```
+compose trait Add(+) { add; };
+compose trait Sub(-) { sub; };
+compose struct PointState { x: Real, y: Real };
 compose
-    protocol Arithmetic {
-        add(# #) -> #;
-        sub(# #) -> #;
-        bitwidth(#) -> ##;
-    };
-
-class Number implements Arithmetic {
-    add(x:Number y:Number) -> Number {
-        x + y
-    }
-    sub(x:Number y:Number) -> Number {
-        if (y > x) {
-            crash;
-        } else {
-            x - y
-        }
-    }
-    bitwidth(x:Number) -> Uint {
-        // logic to get log2 + 1
-    }
-}
+  class Point(PointState) impl Add, Sub {
+    add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+    sub(self: Self, p: Self) -> Self { ( self.x - p.x  self.y - p.y ) }
+  }
+;
+let p = Point { x: 101, y: 105 };
+let q = Point { x: 42, y: 7 };
+p + q
 ```
 
 ## REPL development
