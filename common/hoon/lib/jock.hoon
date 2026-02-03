@@ -87,7 +87,7 @@
 +$  jpunc
   $+  jpunc
   $?  %'.'  %';'  %','  %':'  %'&'  %'$'
-      %'@'  %'?'  %'!'  %'(('
+      %'@'  %'?'  %'!'  %'~'  %'(('
       %'('  %')'  %'{'  %'}'  %'['  %']'
       %'='  %'<'  %'>'  %'#'
       %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
@@ -366,7 +366,7 @@
         (cold %'⊃' (jest '⊃'))
         %-  perk
         :~  %'.'  %';'  %','  %':'  %'&'  %'$'
-            %'@'  %'?'  %'!'  :: XXX exclude %'((' which is a pseudo-punctuator
+            %'@'  %'?'  %'!'  %'~'  :: XXX exclude %'((' which is a pseudo-punctuator
             %'('  %')'  %'{'  %'}'  %'['  %']'
             %'='  %'<'  %'>'  %'#'
             %'+'  %'-'  %'*'  %'/'  %'%'  %'_'
@@ -443,7 +443,7 @@
       [%loop next=jock]
       [%defer next=jock]
       [%match value=jock cases=(map jock jock) default=(unit jock)]
-      [%cases value=jock cases=(map jock jock) default=(unit jock)]
+      [%switch value=jock cases=(map jock jock) default=(unit jock)]
       [%eval p=jock q=jock]
       [%print body=?([%jock jock]) next=jock]
       ::
@@ -453,6 +453,8 @@
       [%call func=jock arg=(unit jock)]
       [%index expr=jock idx=jock]
       [%cast mode=?(%as %as-q %as-x) expr=jock target=jype]
+      [%coalesce expr=jock fallback=jock]
+      [%bind name=term]
       [%compare comp=comparator a=jock b=jock]
       [%limb p=(list jlimb)]
       [%atom p=jatom]
@@ -652,6 +654,12 @@
       =^  target  tokens
         (match-jype tokens)
       $(lock [%cast mode lock target])
+    ::  - null coalesce (??)
+    ?:  &((has-punctuator -.tokens %'?') !=(~ +.tokens) (has-punctuator +<.tokens %'?'))
+      =.  tokens  +>.tokens  :: skip both '?' tokens
+      =^  fallback  tokens
+        (match-inner-jock tokens)
+      $(lock [%coalesce lock fallback])
     =^  oc=(unit term)  tokens
       (any-operator tokens)
     ?~  oc  [lock tokens]
@@ -735,6 +743,12 @@
       =^  target  tokens
         (match-jype tokens)
       $(lock [%cast mode lock target])
+    ::  - null coalesce (??)
+    ?:  &((has-punctuator -.tokens %'?') !=(~ +.tokens) (has-punctuator +<.tokens %'?'))
+      =.  tokens  +>.tokens  :: skip both '?' tokens
+      =^  fallback  tokens
+        (match-inner-jock tokens)
+      $(lock [%coalesce lock fallback])
     ::  - compare ('==','<','<=','>','>=','!=' is the next token)
     ?:  ?|  &((has-punctuator -.tokens %'=') (has-punctuator +<.tokens %'='))
             (has-punctuator -.tokens %'<')
@@ -1408,14 +1422,14 @@
     :_  tokens
     [%match value -.pairs +.pairs]
   ::
-  :: [%cases value=jock cases=(map jock jock) default=(unit jock)]
+  :: [%switch value=jock cases=(map jock jock) default=(unit jock)]
       %switch
     =^  value  tokens
       (match-inner-jock tokens)
     =^  pairs  tokens
       (match-block [tokens %'{' %'}'] match-match)
     :_  tokens
-    [%cases value -.pairs +.pairs]
+    [%switch value -.pairs +.pairs]
   ::
       ?(%loop %defer)
     ?>  (got-punctuator -.tokens %';')
@@ -1721,6 +1735,23 @@
       ?>  (got-punctuator -.tokens %'}')  :: no trailing tokens in case block
       =.  fall  `jock
       [[(malt duo) fall] tokens]
+    :: null case: ~ -> expr;
+    ?:  &(!=(~ tokens) (has-punctuator -.tokens %'~'))
+      ?>  (got-punctuator +<.tokens %'->')
+      =^  jock  tokens  `[jock (list token)]`(match-jock `(list token)`+>.tokens)
+      ?>  (got-punctuator -.tokens %';')
+      =.  tokens  +.tokens
+      $(duo [[[%atom [%number 0] %.y] jock] duo])
+    ::
+    :: name binding case: name -> expr;
+    ?:  &(!=(~ tokens) ?=(%name -<.tokens) !=(~ +.tokens) (has-punctuator +<.tokens %'->'))
+      =/  bind-name=term  ->.tokens
+      =>  .(tokens `(list token)`tokens)  :: TMI
+      ?>  (got-punctuator +<.tokens %'->')
+      =^  jock  tokens  `[jock (list token)]`(match-jock `(list token)`+>.tokens)
+      ?>  (got-punctuator -.tokens %';')
+      =.  tokens  +.tokens
+      $(duo [[[%bind bind-name] jock] duo])
     :: regular case
     =^  jock-1  tokens  (match-jock tokens)
     ?>  (got-punctuator -.tokens %'->')
@@ -2254,6 +2285,21 @@
         [[%fork [%none ~]^%$ tgt] %$]
       ==
     ::
+        %coalesce
+      =+  [val val-jyp]=$(j expr.j)
+      ::  Verify expr has option type (?T = fork of none and T)
+      ::  val-jyp = [[%fork p=none-jyp q=inner-jyp] name]
+      ?>  &(?=(@ -<.val-jyp) ?=(%fork -.p.val-jyp))
+      ?>  ?=(%none -.-.p.p.val-jyp)
+      =/  inner-jyp=jype  q.p.val-jyp
+      =+  [fb fb-jyp]=$(j fallback.j)
+      ::  Runtime nock:
+      ::  [%8 val ...]  — push compiled val as axis 2
+      ::  val at axis 2. If val=0 (null): return fallback. Else: return tail of val (axis 5).
+      ::  [%7 [%0 3] fb] = restore original subject, then evaluate fb.
+      :-  [%8 val [%6 [%5 [%1 0] [%0 2]] [%7 [%0 3] fb] [%0 5]]]
+      inner-jyp
+    ::
         %let
       ~|  %let-value
       =+  [val val-jyp]=$(j val.j)
@@ -2641,30 +2687,78 @@
         cases  +.cases
       ==
     ::
-        %cases
+        %switch
       =+  [val val-jyp]=$(j value.j)
       =/  cases=(list (pair jock jock))  ~(tap by cases.j)
       ?:  =(~ cases)  ~|("expect more. cases: ~" !!)
-      :_  jyp
-      ^-  nock
-      :+  %8
-        [%1 val]
-      =/  cell=nock
-        ?~  default.j  [%0 0]
-        =+  [def def-jyp]=$(j u.default.j)
-        [%7 [%0 3] [%1 def]]
-      |-
-      ?~  cases  cell
-      =+  [jok jok-jyp]=^$(j ->.cases)
-      %=  $
-        cell   :^    %6
+      ::  Check if this is an option-type switch (fork with %none)
+      ?.  &(?=(@ -<.val-jyp) ?=(%fork -.p.val-jyp) ?=(%none -.-.p.p.val-jyp))
+        ::  Original switch logic (non-option types)
+        :_  jyp
+        ^-  nock
+        :+  %8
+          [%1 val]
+        =/  cell=nock
+          ?~  default.j  [%0 0]
+          =+  [def def-jyp]=$(j u.default.j)
+          [%7 [%0 3] [%1 def]]
+        |-
+        ?~  cases  cell
+        =+  [jok jok-jyp]=^$(j ->.cases)
+        %=  $
+          cell   :^    %6
+                     ^-  nock
+                     (hunt-value -<.cases)
                    ^-  nock
-                   (hunt-value -<.cases)
-                 ^-  nock
-                 [%7 [%0 3] %1 `nock`jok]
-               cell
-        cases  +.cases
-      ==
+                   [%7 [%0 3] %1 `nock`jok]
+                 cell
+          cases  +.cases
+        ==
+      ::  Option switch: specialized path for ?T types
+      =/  inner-jyp=jype  q.p.val-jyp
+      =/  none-case=(unit jock)  ~
+      =/  some-case=(unit [term jock])  ~
+      =/  default-case=(unit jock)  default.j
+      |-
+      ?~  cases
+        ::  Build nock: push val, test if null
+        =/  null-branch=nock
+          ?^  none-case
+            =+  [nok nok-jyp]=^$(j u.none-case)
+            [%7 [%0 3] nok]
+          ?^  default-case
+            =+  [nok nok-jyp]=^$(j u.default-case)
+            [%7 [%0 3] nok]
+          [%0 0]  :: crash if no null handler
+        =/  some-branch=nock
+          ?^  some-case
+            ::  Compile body with name bound to inner value
+            =/  bind-name=term  -.u.some-case
+            =/  bind-body=jock  +.u.some-case
+            =/  named-jyp=jype  [-.inner-jyp bind-name]
+            =+  [body body-jyp]=^$(j bind-body, jyp (~(cons jt named-jyp) jyp))
+            ::  Current subject in %8 is [val orig-subj]
+            ::  inner-val = tail of val = axis 5
+            ::  orig-subj = axis 3
+            ::  Build [inner-val orig-subj] then run body:
+            [%7 [[%0 5] [%0 3]] body]
+          ?^  default-case
+            =+  [nok nok-jyp]=^$(j u.default-case)
+            [%7 [%0 3] nok]
+          [%0 0]  :: crash if no some handler
+        :_  inner-jyp
+        [%8 val [%6 [%5 [%1 0] [%0 2]] null-branch some-branch]]
+      ::  Scan cases for patterns
+      =/  key=jock  p.i.cases
+      =/  val=jock  q.i.cases
+      ?:  &(?=(@ -.key) ?=(%bind -.key))
+        ::  %bind case
+        $(some-case `[name.key val], cases t.cases)
+      ?:  &(?=(@ -.key) ?=(%atom -.key))
+        ::  Null literal case (value 0)
+        $(none-case `val, cases t.cases)
+      ::  Other patterns: fall through
+      $(cases t.cases)
     ::
         %call
       ?+    -.func.j  ~|('must call a limb' !!)
@@ -3221,6 +3315,10 @@
         %crash
       ~|  %crash
       [[%0 0] jyp]
+    ::
+        %bind
+      ~|  '%bind: only valid as a match case pattern'
+      !!
     ==
   ::
   ++  get-index-number

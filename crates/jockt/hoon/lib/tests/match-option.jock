@@ -1,0 +1,5 @@
+let x:@ = 42;
+switch (x as? Atom) {
+  ~ -> 0;
+  v -> v;
+}
