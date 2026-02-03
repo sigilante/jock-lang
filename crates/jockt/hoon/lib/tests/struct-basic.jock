@@ -1,4 +1,2 @@
-compose
-  struct Point { x: Real, y: Real }
-;
+struct Point { x: Real, y: Real };
 Point

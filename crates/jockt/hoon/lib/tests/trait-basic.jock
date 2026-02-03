@@ -1,14 +1,8 @@
-compose
-  trait Arithmetic { add; neg; }
-;
-compose
-  struct PointState { x: Real, y: Real }
-;
-compose
-  class Point(PointState) impl Arithmetic {
-    add(self: PointState) -> Real { self.x }
-    neg(self: PointState) -> Real { self.y }
-  }
-;
+trait Arithmetic { add; neg; };
+struct PointState { x: Real, y: Real };
+class Point(PointState) impl Arithmetic {
+  add(self: PointState) -> Real { self.x }
+  neg(self: PointState) -> Real { self.y }
+};
 let p = Point { x: 42, y: 7 };
 p

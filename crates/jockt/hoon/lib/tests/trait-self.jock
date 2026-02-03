@@ -1,19 +1,11 @@
-compose
-  trait Arithmetic { add; neg; }
-;
-compose
-  trait Subtraction { sub; }
-;
-compose
-  struct PointState { x: Real, y: Real }
-;
-compose
-  class Point(PointState) impl Arithmetic, Subtraction {
-    add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
-    neg(self: Self) -> Real { self.y }
-    sub(self: Self, p: Self) -> Self { ( self.x - p.x  self.y - p.y ) }
-  }
-;
+trait Arithmetic { add; neg; };
+trait Subtraction { sub; };
+struct PointState { x: Real, y: Real };
+class Point(PointState) impl Arithmetic, Subtraction {
+  add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+  neg(self: Self) -> Real { self.y }
+  sub(self: Self, p: Self) -> Self { ( self.x - p.x  self.y - p.y ) }
+};
 let p = Point { x: 101, y: 105 };
 let q = Point { x: 42, y: 7 };
 p.sub(q)

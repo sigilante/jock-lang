@@ -1,6 +1,4 @@
-compose
-  struct Point { x: Real, y: Real }
-;
+struct Point { x: Real, y: Real };
 let p = Point { x: 42, y: 7 };
 p.x = 99;
 p.x

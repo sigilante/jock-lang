@@ -1,15 +1,9 @@
-compose
-  struct Vectre { x: Real, y: Real, z: Real }
-;
-compose
-  alias Point Vectre
-;
-compose
-  class Body(Vectre) {
-    getx(self: Vectre) -> Real {
-      self.x
-    }
+struct Vectre { x: Real, y: Real, z: Real };
+alias Point Vectre;
+class Body(Vectre) {
+  getx(self: Vectre) -> Real {
+    self.x
   }
-;
+};
 let p = Point { x: 10, y: 20, z: 30 };
 p.z

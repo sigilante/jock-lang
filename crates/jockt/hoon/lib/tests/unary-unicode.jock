@@ -1,13 +1,7 @@
-compose
-  trait Neg(unary ⊖) { neg; }
-;
-compose
-  struct S { val: Real }
-;
-compose
-  class C(S) impl Neg {
-    neg(self: Self) -> Real { (100 - self.val) }
-  }
-;
+trait Neg(unary ⊖) { neg; };
+struct S { val: Real };
+class C(S) impl Neg {
+  neg(self: Self) -> Real { (100 - self.val) }
+};
 let w = C { val: 30 };
 ⊖w

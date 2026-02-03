@@ -1216,7 +1216,12 @@
       (got-name -.tokens)
     =.  tokens  +.tokens
     =-  ~&(- -)
-    [[%alias name target] tokens]
+    =/  ali=jock  [%alias name target]
+    ?.  &(!=(~ tokens) (has-punctuator -.tokens %';'))
+      [ali tokens]
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%compose ali next] tokens]
   ::
   ::  trait Arithmetic { add; neg; }
   ::  trait Add(+) { add; }
@@ -1261,7 +1266,12 @@
       ?>  (got-punctuator -.tokens %';')
       =.  tokens  +.tokens
       $(methods [method-name methods])
-    [[%trait name methods op unary] tokens]
+    =/  trt=jock  [%trait name methods op unary]
+    ?.  &(!=(~ tokens) (has-punctuator -.tokens %';'))
+      [trt tokens]
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%compose trt next] tokens]
   ::
   ::  struct Point { x: Real, y: Real };
   ::  [%struct name=cord fields=(list [name=term type=jype])]
@@ -1287,7 +1297,12 @@
       =?  tokens  (has-punctuator -.tokens %',')
         +.tokens
       $(fields [[field-name field-type] fields])
-    [[%struct name fields] tokens]
+    =/  str=jock  [%struct name fields]
+    ?.  &(!=(~ tokens) (has-punctuator -.tokens %';'))
+      [str tokens]
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%compose str next] tokens]
   ::
   ::  class Point(PointState) { getx(self: PointState) -> Real { self.x } }
   ::  [%class state=jype arms=(map term jock)]
@@ -1323,10 +1338,10 @@
     ?>  (got-punctuator -.tokens %'{')
     =.  tokens  +.tokens
     =|  arms=(map term jock)
-    |-
-    ?:  (has-punctuator -.tokens %'}')
-      :_  +.tokens
-      [%class state=state arms=arms traits=traits]
+    =^  arms  tokens
+      |-
+      ?:  (has-punctuator -.tokens %'}')
+        [arms +.tokens]
     ::  Parse method name
     =/  method-name=cord
       ~|  'class: expected method name'
@@ -1350,6 +1365,12 @@
     =/  method-body=jock
       [%lambda [`inp out] body ~]
     $(arms (~(put by arms) method-name [%method method-type method-body]))
+    =/  cls=jock  [%class state=state arms=arms traits=traits]
+    ?.  &(!=(~ tokens) (has-punctuator -.tokens %';'))
+      [cls tokens]
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%compose cls next] tokens]
   ::
   ::  if (a < b) { +(a) } else { +(b) }
   ::  [%if cond=jock then=jock after-if=after-if-expression]

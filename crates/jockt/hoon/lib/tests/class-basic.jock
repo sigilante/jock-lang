@@ -1,12 +1,8 @@
-compose
-  struct PointState { x: Real, y: Real }
-;
-compose
-  class Point(PointState) {
-    getx(self: PointState) -> Real {
-      self.x
-    }
+struct PointState { x: Real, y: Real };
+class Point(PointState) {
+  getx(self: PointState) -> Real {
+    self.x
   }
-;
+};
 let p = Point { x: 42, y: 7 };
 p
