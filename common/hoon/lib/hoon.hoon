@@ -639,4 +639,18 @@
     =+  d=(get b)
     (~(put by a) b (~(put in d) c))
   --
+::
+++  scot-ud                                              ::  @ud to @t
+  |=  a=@
+  ^-  @
+  ?:  =(0 a)  '0'
+  =/  digits=(list @)  ~
+  =/  b  a
+  |-
+  ?:  =(0 b)
+    =/  out=@  0
+    |-
+    ?~  digits  out
+    $(out (cat 3 out i.digits), digits t.digits)
+  $(b (div b 10), digits [(add 48 (mod b 10)) digits])
 --

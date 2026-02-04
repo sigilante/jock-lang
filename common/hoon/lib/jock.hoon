@@ -3742,10 +3742,7 @@
         val
       ::
           %number
-        ::  TODO: number formatting requires jetted hoon library
-        ::  calls.  The self-contained gate approach is too slow
-        ::  without jets.
-        [%1 '<Atom>']
+        (make-hoon-call %scot-ud val)
       ::
           %hex
         [%1 '<hex>']
@@ -3784,51 +3781,5 @@
     :+  %8
       :^  %9  +<+<.qmin  %0  -.ljw
     [%9 2 %10 [6 [%7 [%0 3] val]] %0 2]
-  ::
-  ++  ud-to-cord
-    |=  val=nock
-    ^-  nock
-    ::  Generate Nock to convert @ud to @t at runtime
-    ::  Embeds a small self-contained gate (no large context)
-    =/  gate  scot-ud-gate
-    ;;  nock
-    [%9 2 %10 [6 val] %1 gate]
   --
-::
-::  Standalone formatting gate for runtime prettyprinting.
-::  Minimal context: only includes the arithmetic/string ops needed.
-::
-++  scot-ud-gate
-  =>  ~
-  =>  |%
-      ++  dec  |=(a=@ ?:(=(0 a) !! =+(b=0 |-(?:(=(a +(b)) b $(b +(b)))))))
-      ++  sub  |=([a=@ b=@] ?:(=(0 b) a $(a (dec a), b (dec b))))
-      ++  add  |=([a=@ b=@] ?:(=(0 b) a $(a +(a), b (dec b))))
-      ++  mul  |=([a=@ b=@] ?:(=(0 b) 0 (add a $(b (dec b)))))
-      ++  div  |=([a=@ b=@] ?:((lth a b) 0 +($(a (sub a b)))))
-      ++  mod  |=([a=@ b=@] (sub a (mul (div a b) b)))
-      ++  lth  |=([a=@ b=@] ?:(=(0 b) %.n ?:(=(0 a) %.y $(a (dec a), b (dec b)))))
-      ++  cat  |=([a=@ b=@ c=@] (add b (mul c (bex (mul (bex a) (met a b))))))
-      ++  bex  |=(a=@ ?:(=(0 a) 1 (mul 2 $(a (dec a)))))
-      ++  met  |=([a=@ b=@] ?:(=(0 b) 0 +($(b (rsh a b)))))
-      ++  rsh  |=([a=@ b=@] (div b (bex (bex a))))
-      --
-  |=  a=@
-  ^-  @
-  ?:  =(0 a)  '0'
-  =/  digits=*  ~
-  =/  b  a
-  |-
-  ?:  =(0 b)
-    =/  out=@  0
-    |-
-    ?:  =(digits 0)  out
-    %=  $
-      out  (cat 3 out ;;(@ -.digits))
-      digits  +.digits
-    ==
-  %=  $
-    b  (div b 10)
-    digits  [(add 48 (mod b 10)) digits]
-  ==
 --
