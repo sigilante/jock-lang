@@ -914,6 +914,9 @@
       (match-block [tokens %'(' %')'] match-inner-jock)
     ::  TODO: check if we're in a compare
     [[%cell-check jock] tokens]
+  ::  Null literal  ~
+      %'~'
+    [[%atom [%number 0] %.y] tokens]
   ::  $ = recur
       %'$'
     ?.  (has-punctuator -.tokens %'(')
@@ -1522,8 +1525,15 @@
     ~|("expect jype. token: ~" !!)
   ::  Option type  ?T
   ?:  &(!=(~ tokens) (has-punctuator -.tokens %'?'))
-    ?.  &(!=(~ +.tokens) ?=(%type -<.+.tokens))
-      ~|("expect type after '?' for option type" !!)
+    ?.  ?|  &(!=(~ +.tokens) ?=(%type -<.+.tokens))
+            &(!=(~ +.tokens) (has-punctuator +<.tokens %'?'))
+            &(!=(~ +.tokens) (has-punctuator +<.tokens %'*'))
+            &(!=(~ +.tokens) (has-punctuator +<.tokens %'('))
+        ==
+      ::  Bare ? — fall through to boolean type
+      =^  jyp-leaf  tokens
+        (match-jype-leaf tokens)
+      [[jyp-leaf %$] tokens]
     =/  rest=(list token)  +.tokens  :: skip '?'
     =^  inner-jype  rest
       (match-jype rest)
