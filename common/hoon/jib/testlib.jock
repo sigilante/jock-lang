@@ -1,0 +1,2 @@
+func double(x: Atom) -> Atom { (x + x) };
+~

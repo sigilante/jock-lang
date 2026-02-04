@@ -698,6 +698,17 @@
   ::  loop to allow chaining: a[0][1]
   $(lock index-expr, tokens +.tokens)
 ::
+++  splice-jock
+  |=  [lib=jock nex=jock]
+  ^-  jock
+  ?:  ?=(%compose -.lib)
+    lib(q $(lib q.lib))
+  ?:  ?=(%func -.lib)
+    ;;(jock [-.lib +<.lib +>-.lib $(lib +>+.lib)])
+  ?:  ?=(%let -.lib)
+    ;;(jock [-.lib +<.lib +>-.lib $(lib +>+.lib)])
+  nex
+::
 ++  match-inner-jock
   |=  =tokens
   ^-  [jock (list token)]
@@ -1489,7 +1500,17 @@
     =/  src=jock  [%limb ~[-.tokens]]
     =/  tokens  +.tokens
     =/  past  (rush (~(got by libs) nom) (ifix [gay gay] tall:(vang | /)))
-    ?~  past  ~|("unable to parse Hoon library: {<[+<+.src]>}" !!)
+    ?~  past
+      ::  Not Hoon — try parsing as Jock library
+      =/  lib-cord  (~(got by libs) nom)
+      =/  lib-tokens  (rash lib-cord parse-tokens)
+      =^  lib-jock  lib-tokens
+        (match-jock lib-tokens)
+      ?>  (got-punctuator -.tokens %';')
+      =^  next  tokens
+        (match-jock +.tokens)
+      :_  tokens
+      (splice-jock lib-jock next)
     =/  p  (~(mint ut %noun) %noun u.past)
     =?  nom  (has-keyword -.tokens %as)
       ?>  =(%name +<-.tokens)
@@ -3335,7 +3356,7 @@
       =+  [nex nex-jyp]=$(j next.j)
       :_  nex-jyp
       :+  %11
-        [%slog [%1 0] %1 (pprint val val-jyp)]
+        [%slog [%1 0] (format-nock val val-jyp)]
       nex
     ::
         %crash
@@ -3702,42 +3723,112 @@
         %atom
       [%5 [%1 `@`+.p.jock] %0 axis]
     ==
-  --
   ::
-  ::  Prettyprinter
-  ++  pprint
-    |=  [=nock =jype]
-    ^-  tank
-    :: ?^  -<.j    [$(j p.j) $(j q.j)]
-    ?+    -<.jype
-        :-  %leaf
-        "print: {<[-.jype]>} {<`*`nock>}"
-    ::
+  ++  format-nock
+    |=  [val=nock typ=jype]
+    ^-  nock
+    ::  Returns Nock formula that evaluates to @t (a cord)
+    ::  The slog handler accepts raw atoms as cords directly
+    (cord-nock val typ)
+  ::
+  ++  cord-nock
+    |=  [val=nock typ=jype]
+    ^-  nock
+    ::  Returns Nock that evaluates to @t (a cord)
+    ?+    -<.typ  [%1 '<opaque>']
         %atom
-      %-  crip
-      ?+    ->-.jype  "{<(* +.nock)>}"
-        %logical
-      "{<;;(? +.nock)>}"
+      ?+    ->-.typ  [%1 '<atom>']
+          %chars
+        val
       ::
-        %number
-      "{<;;(@ud +.nock)>}"
+          %number
+        ::  TODO: number formatting requires jetted hoon library
+        ::  calls.  The self-contained gate approach is too slow
+        ::  without jets.
+        [%1 '<Atom>']
       ::
-        %hex
-      "{<;;(@ux +.nock)>}"
+          %hex
+        [%1 '<hex>']
       ::
-        %chars
-      "{<;;(@t +.nock)>}"
-      ::
+          %logical
+        ::  if =(0 val) then '%.y' else '%.n'
+        :+  %6  [%5 [%1 0] val]
+        :-  [%1 '%.y']
+        [%1 '%.n']
       ==
-    ::
         %fork
-      ::  Option type (?T): fork of %none and T
-      ?:  &(?=(@ -<.p.p.jype) =(%none -.p.p.p.jype))
-        ?:  =(0 nock)
-          (crip "~")
-        $(nock ;;(^nock +.nock), jype q.p.jype)
-      ::  Generic fork: print with first branch type
-      $(jype p.p.jype)
-    ::
+      ::  Option type (?T): check none/some at runtime
+      ?:  &(?=(@ -<.p.p.typ) =(%none -.p.p.p.typ))
+        ::  if =(0 val) then "~" else format payload
+        :+  %6  [%5 [%1 0] val]
+        :-  [%1 '~']
+        $(val [%7 val [%0 3]], typ q.p.typ)
+      $(typ p.p.typ)
     ==
+  ::
+  ++  make-hoon-call
+    |=  [arm=term val=nock]
+    ^-  nock
+    ::  Generate Nock to call hoon.<arm>(val) at runtime
+    ::  Same pattern as list indexing (hoon.snag)
+    =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+    ?~  lim  ~|('hoon library not found for print' !!)
+    ?>  ?=(%| -.u.lim)
+    =/  typ=jype  p.p.u.lim
+    =/  ljw=(list jwing)  r.p.u.lim
+    =+  ast=(j2h ~[[%name arm]] ~)
+    ?>  ?=(%hoon -<.typ)
+    =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+    =/  qmin  ;;(nock q.min)
+    ;;  nock
+    :+  %8
+      :^  %9  +<+<.qmin  %0  -.ljw
+    [%9 2 %10 [6 [%7 [%0 3] val]] %0 2]
+  ::
+  ++  ud-to-cord
+    |=  val=nock
+    ^-  nock
+    ::  Generate Nock to convert @ud to @t at runtime
+    ::  Embeds a small self-contained gate (no large context)
+    =/  gate  scot-ud-gate
+    ;;  nock
+    [%9 2 %10 [6 val] %1 gate]
+  --
+::
+::  Standalone formatting gate for runtime prettyprinting.
+::  Minimal context: only includes the arithmetic/string ops needed.
+::
+++  scot-ud-gate
+  =>  ~
+  =>  |%
+      ++  dec  |=(a=@ ?:(=(0 a) !! =+(b=0 |-(?:(=(a +(b)) b $(b +(b)))))))
+      ++  sub  |=([a=@ b=@] ?:(=(0 b) a $(a (dec a), b (dec b))))
+      ++  add  |=([a=@ b=@] ?:(=(0 b) a $(a +(a), b (dec b))))
+      ++  mul  |=([a=@ b=@] ?:(=(0 b) 0 (add a $(b (dec b)))))
+      ++  div  |=([a=@ b=@] ?:((lth a b) 0 +($(a (sub a b)))))
+      ++  mod  |=([a=@ b=@] (sub a (mul (div a b) b)))
+      ++  lth  |=([a=@ b=@] ?:(=(0 b) %.n ?:(=(0 a) %.y $(a (dec a), b (dec b)))))
+      ++  cat  |=([a=@ b=@ c=@] (add b (mul c (bex (mul (bex a) (met a b))))))
+      ++  bex  |=(a=@ ?:(=(0 a) 1 (mul 2 $(a (dec a)))))
+      ++  met  |=([a=@ b=@] ?:(=(0 b) 0 +($(b (rsh a b)))))
+      ++  rsh  |=([a=@ b=@] (div b (bex (bex a))))
+      --
+  |=  a=@
+  ^-  @
+  ?:  =(0 a)  '0'
+  =/  digits=*  ~
+  =/  b  a
+  |-
+  ?:  =(0 b)
+    =/  out=@  0
+    |-
+    ?:  =(digits 0)  out
+    %=  $
+      out  (cat 3 out ;;(@ -.digits))
+      digits  +.digits
+    ==
+  %=  $
+    b  (div b 10)
+    digits  [(add 48 (mod b 10)) digits]
+  ==
 --
