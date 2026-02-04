@@ -653,4 +653,20 @@
     ?~  digits  out
     $(out (cat 3 out i.digits), digits t.digits)
   $(b (div b 10), digits [(add 48 (mod b 10)) digits])
+::
+++  scot-ux                                              ::  @ux to @t
+  |=  a=@
+  ^-  @
+  ?:  =(0 a)  '0x0'
+  =/  digits=(list @)  ~
+  =/  b  a
+  |-
+  ?:  =(0 b)
+    =/  out=@  (cat 3 '0' 'x')
+    |-
+    ?~  digits  out
+    $(out (cat 3 out i.digits), digits t.digits)
+  =/  d  (mod b 16)
+  =/  c  ?:((lth d 10) (add 48 d) (add 87 d))
+  $(b (div b 16), digits [c digits])
 --

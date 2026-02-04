@@ -3745,7 +3745,7 @@
         (make-hoon-call %scot-ud val)
       ::
           %hex
-        [%1 '<hex>']
+        (make-hoon-call %scot-ux val)
       ::
           %logical
         ::  if =(0 val) then '%.y' else '%.n'
