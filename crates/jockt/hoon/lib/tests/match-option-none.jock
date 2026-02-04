@@ -1,0 +1,5 @@
+let x = (1 2);
+switch (x as? Atom) {
+  ~ -> 99;
+  v -> v;
+}

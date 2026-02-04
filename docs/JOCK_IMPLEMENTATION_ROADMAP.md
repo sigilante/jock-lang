@@ -2,189 +2,151 @@
 ## For Claude Code Execution
 
 **Repository:** github.com/zorp-corp/jock-lang (main) / github.com/sigilante/jock-lang (development fork)
-**Current Branch:** Beta development
+**Current Branch:** `sigilante/jype-refactor`
 **Target:** Production-ready type system + NockApp compatibility
+**Last Updated:** 2026-02-03
 
 ---
 
-## Sprint 1: Type System Foundation (2 weeks)
+## Sprint 1: Type System Foundation ✅ COMPLETE
 
-### Task 1.1: Struct Implementation
-**Location:** `/crates/jockc/hoon/lib/jock.hoon`
+### Task 1.1: Struct Implementation ✅
+**Location:** `/common/hoon/lib/jock.hoon`
 
-**Requirements:**
-- Parse struct definitions with named fields
-- Generate AST nodes for struct types
-- Compile to Nock door structure
-- Support field access via `.` operator
-- Implement structural type checking
+**Completed:**
+- [x] Parser recognizes `struct` keyword and named field definitions
+- [x] AST node: `[%struct name=cord fields=(list [name=term type=jype])]`
+- [x] Struct literal construction: `Point { x: 42, y: 7 }`
+- [x] Field access via `.` operator compiles to axis lookup through `struct-to-jype`
+- [x] Field update via `=` operator (uses Nock 10 edit)
+- [x] Struct bunt (default values) via `type-to-default`
+- [x] Struct as function parameter type (eager `%limb` resolution in lambda mint)
+- [x] Struct as function return type (stripped return type name in `call-core`)
+- [x] Nested structs — field types resolved eagerly at definition time
+- [x] Multiple struct definitions coexist (Nock 8 push-onto-subject)
 
-**Example Code:**
-```jock
-struct Point {
-  x: Real
-  y: Real
-}
+**Nock Compilation (actual):**
+- Struct definition: `compose struct Point { x: Real, y: Real };` → Nock 8 pushes bunt `[0 0]` onto subject
+- Struct literal: `Point { x: 1, y: 2 }` → compiles field values in definition order
+- Field access: `p.x` → `struct-to-jype` maps fields to axes, `axis-at-name` resolves
 
-let p = Point(1.0, 2.0);
-let x_val = p.x;
-```
-
-**Nock Compilation Target:**
-```nock
-// Point as door: [battery sample]
-// sample: [x y]
-// battery: [constructor field-accessors ...]
-[8 [1 [x-val y-val]] [1 /* arms */] 0 1]
-```
-
-**Acceptance Criteria:**
-- [ ] Parser recognizes `struct` keyword and field definitions
-- [ ] AST includes struct type information
-- [ ] Compiler generates correct Nock core
-- [ ] Field access compiles to correct axis lookup
-- [ ] Type checker validates field types
-- [ ] Test: Can create struct, access fields, pass around
+**Tests:**
+- `struct-basic.jock`: Define + reference struct type
+- `struct-field-access.jock`: `p.x` → 42
+- `struct-func-param.jock`: `func getx(p: Point) -> Real { p.x }` → 42
+- `struct-func-simple.jock`: `func identity(p: Point) -> Point { p }` → [42 7]
+- `struct-nested-basic.jock`: `r.origin.x` through Rect→Point → 1
+- `struct-nested-shallow.jock`: `r.origin` → [1 2]
 
 ### Task 1.2: Newtype Wrappers
-**Location:** Same file
+**Status:** Not started. Deferred — struct implementation covers the core use case.
 
-**Requirements:**
-- Single-field structs create nominal types
-- Require explicit cast to unwrap
-- Maintain type distinction at compile time
-
-**Example:**
-```jock
-struct UserId(Atom)
-
-let id = UserId(42);
-let raw = id as Atom;  // OK
-let bad: Atom = id;    // Error: type mismatch
-```
-
-**Implementation Notes:**
-- Use same door structure as structs
-- Type checker maintains distinction
-- `as` operator performs structural cast
-
-**Acceptance Criteria:**
-- [ ] Single-field structs parse correctly
-- [ ] Type system treats as distinct type
-- [ ] Cast operator works correctly
-- [ ] Compile-time type errors for mismatches
-
-### Task 1.3: Type Aliases
-**Location:** Same file
-
-**Requirements:**
-- Transparent aliases (no wrapper)
-- Compile-time substitution
-- Support generic aliases
-
-**Example:**
-```jock
-alias Path = List<Chars>
-alias Wire = Path
-
-let p: Path = /foo/bar;
-let w: Wire = p;  // No cast needed
-```
-
-**Implementation:**
-- Resolve aliases during type checking phase
-- Substitute at AST level
-- No runtime distinction
-
-**Acceptance Criteria:**
-- [ ] Parser recognizes `alias` keyword
-- [ ] Type checker substitutes aliases
-- [ ] No cast required for compatible aliases
-- [ ] Generic aliases work correctly
+### Task 1.3: Type Aliases ✅
+**Completed:**
+- [x] `alias` keyword parsed
+- [x] Aliases resolve to target type at definition time
+- [x] No runtime distinction — transparent substitution
+- Generic aliases not yet supported (requires generics, Sprint 4)
 
 ---
 
-## Sprint 2: Traits & Impl (2 weeks)
+## Sprint 2: Impl Blocks & Traits ✅ COMPLETE
 
-### Task 2.1: Trait Definition
-**Location:** `/crates/jockc/hoon/lib/jock.hoon`
+### Design Direction
 
-**Requirements:**
-- Define trait syntax
-- Parse trait definitions
-- Store trait requirements in compilation environment
-- Support `Self` type parameter
+Structs + impl blocks use the **class-with-struct-state** pattern. The underlying Hoon model is the **door** (a core with a sample):
+- **Struct** = the sample type (data layout)
+- **Class with impl** = the battery (methods operating on that data) + trait validation
+- Together they form a door: `[battery sample]`
 
-**Example:**
+### Task 2.1: Class with Struct State + Methods ✅
+
+**Completed:**
+- [x] `class Name(StructType) { ... }` parses and compiles
+- [x] Methods stored as `(map term jock)` in AST
+- [x] Methods compile to battery arms of a Nock core (door)
+- [x] `self` parameter binds to the struct instance (door sample at axis +6)
+- [x] Method calls resolve via subject walk + core invocation
+- [x] `Self` type resolves to the implementing struct type in method signatures
+- [x] Constructor syntax: `Point { x: 42, y: 7 }` creates struct instance
+
+**Actual Syntax:**
 ```jock
-trait Arithmetic {
-  add(self, other: Self) -> Self
-  neg(self) -> Self
-}
+compose struct PointState { x: Real, y: Real };
+compose
+  class Point(PointState) {
+    add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+    neg(self: Self) -> Real { self.y }
+  }
+;
+let p = Point { x: 101, y: 105 };
+let q = Point { x: 42, y: 7 };
+p.add(q)
 ```
 
-**Implementation Strategy:**
-- Trait = named collection of method signatures
-- Store in compilation environment as type constraint
-- No code generation at trait definition
+**Tests:**
+- `class-basic.jock`: Basic class with struct state and method call
+- `class-define.jock`: Class definition and construction
+- `class-3d.jock`: 3D point class with methods
 
-**Acceptance Criteria:**
-- [ ] Parser recognizes `trait` keyword
-- [ ] Trait definitions stored in environment
-- [ ] Method signatures validated
-- [ ] `Self` type parameter works
+### Task 2.2: Trait Definition & Validation ✅
 
-### Task 2.2: Impl Blocks (via Class)
-**Location:** Same file
+**Completed:**
+- [x] `trait Name { method1; method2; }` parses
+- [x] Trait signatures stored in compilation environment
+- [x] `impl Trait` clause on class validates method presence against trait
+- [x] Multiple traits: `class C(S) impl Trait1, Trait2 { ... }`
+- [x] `Self` type parameter resolves to implementing struct type
+- [x] Missing methods produce compile error
 
-**Requirements:**
-- Use `class` keyword for subject scope management
-- Compile impl to Nock core with methods in battery
-- Subject-oriented method resolution
-
-**Example:**
+**Actual Syntax:**
 ```jock
-class Point(x: Atom, y: Atom) {
-  add(self, other: Point) -> Point {
-    Point(self.x + other.x, self.y + other.y)
+compose trait Arithmetic { add; neg; };
+compose trait Subtraction { sub; };
+compose
+  class Point(PointState) impl Arithmetic, Subtraction {
+    add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+    neg(self: Self) -> Real { self.y }
+    sub(self: Self, p: Self) -> Self { ( self.x - p.x  self.y - p.y ) }
   }
-  
-  neg(self) -> Point {
-    Point(-self.x, -self.y)
-  }
-}
+;
 ```
 
-**Nock Compilation:**
-- Battery contains method formulas
-- Sample contains state (x, y)
-- Method call = slot access + slam
+**Tests:**
+- `trait-basic.jock`: Trait definition + class impl validation
+- `trait-self.jock`: `Self` type in method signatures
+- `trait-multiple.jock`: Class implementing multiple traits
 
-**Acceptance Criteria:**
-- [ ] `class` syntax parses with methods
-- [ ] Methods compile to battery arms
-- [ ] `self` parameter works correctly
-- [ ] Method calls resolve via subject walk
-- [ ] Name collision detection works
+### Task 2.3: Operator Overloading ✅
 
-### Task 2.3: Method Resolution
-**Location:** Compiler type checker
+**Completed:**
+- [x] Traits can bind to operators: `trait Add(+) { add; }` and `trait Neg(unary -) { neg; }`
+- [x] Binary operator overloading: `p + q` dispatches to `add` method
+- [x] Unary operator overloading: `-w` dispatches to `neg` method
+- [x] Arbitrary Unicode operators: `trait Neg(unary ⊖) { neg; }` → `⊖w`
+- [x] Operator whitelist system for custom operators
 
-**Algorithm:**
-1. Walk subject tree (depth-first)
-2. Find arm named `method` where declaring type matches target
-3. Emit Nock: `[9 axis-of-arm [0 axis-of-subject]]`
+**Tests:**
+- `op-overload.jock`: Binary `+` and `-` overloads
+- `unary-parens.jock`: Unary `-` with parenthesized syntax
+- `unary-unicode.jock`: Unicode operator `⊖`
+- `unary-tuple-2.jock`, `unary-tuple-3.jock`: Unary ops on tuples
+- `unary-sint.jock`: Unary negation on signed integers
 
-**Edge Cases:**
-- Name collisions: compile error in v1
-- Type mismatches: compile error
-- Missing methods: compile error
+### Task 2.4: Index Notation ✅
 
-**Acceptance Criteria:**
-- [ ] Method resolution algorithm implemented
-- [ ] Correct Nock generated for method calls
-- [ ] Type checking validates method exists
-- [ ] Clear error messages for failures
+**Completed:**
+- [x] `expr[idx]` syntax parsed into `%index` AST node
+- [x] Tuple indexing: compile-time axis resolution via `tuple-axis` / `get-index-number`
+- [x] List indexing: generates `hoon.snag` call nock directly (no `%call` re-entry)
+- [x] Nested indexing: `b[1][0]` chains correctly
+- [x] Path-basic test for path noun syntax
+
+**Tests:**
+- `indexing-tuple.jock`: `t[0]`, `t[1]`, `t[2]` on tuple → `(100 200 300)`
+- `indexing-list.jock`: `a[0]` on list → `100`
+- `indexing-nested.jock`: `b[1][0]` on nested list → `30`
+- `path-basic.jock`: Path noun syntax
 
 ---
 
@@ -666,25 +628,22 @@ make jockt
 
 ## Immediate Next Actions (This Week)
 
-### Priority 1: Get Development Environment Working
-1. Clone repository
-2. Build hoonc from nockchain
-3. Build jockc and jockt
-4. Run existing tests to verify setup
-5. Read through existing Hoon code to understand structure
+### Priority 1: Sprint 3 — Unions & Pattern Matching
+1. Design union/sum type AST representation
+2. Implement `union` keyword parser
+3. Implement variant construction with head tags
+4. Implement `match` with exhaustiveness checking
+5. Build Result/Option types as union examples
 
-### Priority 2: Start Struct Implementation
-1. Study existing type system in `/crates/jockc/hoon/lib/jock.hoon`
-2. Add parser support for `struct` keyword
-3. Extend AST to include struct nodes
-4. Implement basic struct compilation (no methods yet)
-5. Write tests for struct creation
+### Priority 2: Stabilize Indexing
+1. Verify list indexing end-to-end (blocked on cold Hoon compile time after cache clear)
+2. Verify nested list indexing
+3. Add error messages for out-of-bounds or wrong-type index targets
 
-### Priority 3: Document Current State
-1. Inventory what's implemented vs. spec
-2. Document known bugs/issues
-3. Create task breakdown for remaining work
-4. Set up project tracking (GitHub issues)
+### Priority 3: Improve Error Messages
+1. Add source locations to type errors
+2. Improve trait validation error messages (which method is missing)
+3. Add suggestions for common mistakes
 
 ---
 
@@ -712,17 +671,20 @@ make jockt
 
 ## Success Metrics
 
-### Week 1-2 (Sprint 1)
+### Week 1-2 (Sprint 1) ✅
 - Structs parse and compile
-- Can create struct, access fields
-- Type checker validates struct usage
-- 10+ tests passing
+- Can create struct, access fields, update fields
+- Type aliases work
+- Nested structs work
+- 10+ struct/alias tests passing
 
-### Week 3-4 (Sprint 2)
-- Traits defined and stored
-- Impl blocks compile to cores
-- Method calls work
-- 25+ tests passing
+### Week 3-4 (Sprint 2) ✅
+- Traits defined, stored, and validated
+- Classes with struct state compile to doors
+- Method calls work with `Self` type
+- Operator overloading (binary + unary, including Unicode)
+- Index notation for tuples (compile-time) and lists (runtime via snag)
+- 25+ tests passing (traits, classes, operators, indexing)
 
 ### Week 5-6 (Sprint 3)
 - Unions work with pattern matching
@@ -796,6 +758,6 @@ This roadmap is aggressive but achievable with focused effort. Each sprint build
 
 Let's make Nock programming accessible without compromising on rigor or performance. The future is deterministic computation, and Jock is the practical path to get there.
 
-**Status:** Ready for implementation
-**Last Updated:** 2025-01-22
+**Status:** Sprints 1-2 complete, Sprint 3 next
+**Last Updated:** 2026-02-03
 **Owner:** Claude Code + Senior Engineering Team

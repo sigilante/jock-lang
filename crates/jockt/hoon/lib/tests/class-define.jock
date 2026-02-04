@@ -1,0 +1,7 @@
+struct PointState { x: Real, y: Real };
+class Point(PointState) {
+  getx(self: PointState) -> Real {
+    self.x
+  }
+};
+0

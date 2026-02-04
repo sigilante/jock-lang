@@ -1,8 +1,4 @@
-compose
-  struct Point { x: Real, y: Real }
-;
-compose
-  struct Rect { origin: Point, size: Point }
-;
+struct Point { x: Real, y: Real };
+struct Rect { origin: Point, size: Point };
 let r = Rect { origin: Point { x: 1, y: 2 }, size: Point { x: 10, y: 5 } };
 r.origin.x

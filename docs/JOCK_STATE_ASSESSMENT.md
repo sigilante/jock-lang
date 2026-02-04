@@ -1,7 +1,7 @@
 # Jock Language State Assessment
 
-**Date:** 2026-01-22
-**Branch Reviewed:** `sigilante/freshwater-ray-finned-fish`
+**Date:** 2026-02-03
+**Branch Reviewed:** `sigilante/jype-refactor`
 **Status:** Alpha (Developer Preview → 0.1.0-alpha)
 
 ---
@@ -10,9 +10,9 @@
 
 Jock is a **functional alpha-stage language** targeting the Nock instruction set architecture. It has a working compiler pipeline, a test framework, and basic language features. The codebase is well-organized with clear documentation outlining an ambitious roadmap toward production readiness.
 
-**Current Capability:** Can compile and run basic programs with functions, classes, control flow, lists, and Hoon FFI.
+**Current Capability:** Can compile and run programs with functions, classes, structs, traits, operator overloading, control flow, lists, index notation, and Hoon FFI.
 
-**Gap to Production:** Missing robust type system (traits, generics, unions), NockApp kernel interface, Gall agent support, optimization passes, and developer tooling.
+**Gap to Production:** Missing unions/sum types, generics, NockApp kernel interface, Gall agent support, optimization passes, and developer tooling.
 
 ---
 
@@ -29,17 +29,23 @@ Jock is a **functional alpha-stage language** targeting the Nock instruction set
 |---------|--------|-------|
 | Variables (`let`) | Working | `let x = 42;` |
 | Functions (`func`) | Working | `func add(a:@ b:@) -> @ { a + b }` |
-| Classes | Working | `class Point(x:@ y:@) { ... }` |
+| Structs | Working | `struct Point { x: Real, y: Real }` with field access, update, nesting |
+| Type Aliases | Working | `alias Name = Type;` with chaining |
+| Classes | Working | `class Point(PointState) { ... }` with struct state |
+| Traits | Working | `trait Arithmetic { add; neg; }` with `impl` validation |
+| Operator Overloading | Working | `trait Add(+) { add; }` — binary, unary, Unicode operators |
+| Self Type | Working | `Self` resolves to implementing struct in methods |
+| Index Notation | Working | Tuple: compile-time axis; List: runtime snag |
 | Lambdas | Working | Inline anonymous functions |
 | Control Flow | Working | `if/else`, `if/else if/else` |
 | Recursion | Working | `$` for self-reference |
 | Loops | Working | `loop/recur` pattern |
 | Pattern Matching | Partial | `match` with type/case matching |
-| Lists | Working | `[1 2 3]`, basic operations |
+| Lists | Working | `[1 2 3]`, basic operations, indexing |
 | Sets | Working | Via Hoon FFI |
 | Arithmetic | Working | `+`, `-`, `*`, `/`, `%`, `**` |
 | Comparison | Working | `==`, `!=`, `<`, `>`, `<=`, `>=` |
-| Logical Operators | Working | `&&`, `||`, `!` |
+| Logical Operators | Working | `&&`, `\|\|`, `!` |
 | Hoon FFI | Working | `hoon.add`, `hoon.mul`, etc. |
 | Comments | Working | `//` line, `/* */` block |
 | Print | Partial | Works for literals, variables incomplete |
@@ -65,14 +71,16 @@ The `/common/hoon/try/` directory contains working examples:
 ### Type System (Critical Path)
 | Feature | Status | Priority |
 |---------|--------|----------|
-| Structs (named fields) | Not implemented | P0 |
-| Newtypes (`struct UserId(Atom)`) | Not implemented | P0 |
-| Type aliases (`alias`) | Not implemented | P1 |
-| Traits | Not implemented | P0 |
-| Impl blocks | Not implemented | P0 |
+| Structs (named fields) | ✅ Implemented | Done |
+| Newtypes (`struct UserId(Atom)`) | Not implemented | P1 |
+| Type aliases (`alias`) | ✅ Implemented | Done |
+| Traits | ✅ Implemented | Done |
+| Impl blocks (via class) | ✅ Implemented | Done |
+| Operator overloading | ✅ Implemented | Done |
+| Index notation | ✅ Implemented | Done |
 | Unions (sum types) | Not implemented | P0 |
 | Generics | Not implemented | P0 |
-| Exhaustive pattern matching | Not implemented | P1 |
+| Exhaustive pattern matching | Not implemented | P0 |
 | Option type (`?T`) | Not native | P1 |
 | Option chaining (`?.`, `??`, `!`) | Not implemented | P1 |
 | Cast operators (`as`, `as?`, `as!`) | Not implemented | P1 |
@@ -182,17 +190,17 @@ The main compiler is a single 2,913-line Hoon file implementing:
 
 The `/docs/JOCK_IMPLEMENTATION_ROADMAP.md` defines 7 sprints:
 
-| Sprint | Focus | Realistic? |
-|--------|-------|------------|
-| 1 | Structs, newtypes, aliases | Yes |
-| 2 | Traits, impl blocks | Challenging |
-| 3 | Unions, pattern matching | Yes |
-| 4 | Generics, monomorphization | Challenging |
-| 5 | NockApp kernel interface | Yes |
-| 6 | Path syntax, stdlib | Yes |
+| Sprint | Focus | Status |
+|--------|-------|--------|
+| 1 | Structs, newtypes, aliases | ✅ Complete |
+| 2 | Traits, impl blocks, operators, indexing | ✅ Complete |
+| 3 | Unions, pattern matching | Next |
+| 4 | Generics, monomorphization | Upcoming |
+| 5 | NockApp kernel interface | Upcoming |
+| 6 | Path syntax, stdlib | Upcoming |
 | 7 | Optimization, polish | Ongoing |
 
-**Critical Path:** Type system overhaul (Sprints 1-4) is the gating factor for all else.
+**Critical Path:** Unions + generics (Sprints 3-4) are the remaining type system gating factors.
 
 **Risk Assessment:**
 - Type system complexity may require iteration
@@ -231,8 +239,12 @@ The `/docs/JOCK_IMPLEMENTATION_ROADMAP.md` defines 7 sprints:
 | Classes with methods | Yes | - |
 | Control flow | Yes | - |
 | Recursion | Yes | - |
-| Structs with named fields | No | Major |
-| Traits and impls | No | Major |
+| Structs with named fields | Yes | - |
+| Type aliases | Yes | - |
+| Traits and impls | Yes | - |
+| Operator overloading | Yes | - |
+| Index notation (tuple + list) | Yes | - |
+| Self type in methods | Yes | - |
 | Unions (sum types) | No | Major |
 | Generics | No | Major |
 | NockApp kernel | No | Major |
@@ -245,13 +257,13 @@ The `/docs/JOCK_IMPLEMENTATION_ROADMAP.md` defines 7 sprints:
 
 ## 8. Conclusion
 
-Jock is a **promising alpha-stage language** with a working compiler, good test coverage, and clear vision. The gap between current state and production readiness is significant but well-documented.
+Jock is a **promising alpha-stage language** with a working compiler, good test coverage, and clear vision. The type system foundation (structs, traits, operator overloading, indexing) is now in place. The remaining gap to production is unions/generics, NockApp integration, and tooling.
 
 **What's Needed:**
-1. Type system overhaul (3-6 months of focused work)
-2. NockApp integration (1-2 months)
+1. Unions, pattern matching, and generics (remaining type system work)
+2. NockApp integration (kernel interface, path syntax)
 3. Standard library expansion (ongoing)
-4. Developer tooling (3-6 months)
+4. Developer tooling (LSP, debugger)
 
 **Realistic Timeline to Beta:** 6-9 months with dedicated effort
 **Realistic Timeline to 1.0:** 12-18 months

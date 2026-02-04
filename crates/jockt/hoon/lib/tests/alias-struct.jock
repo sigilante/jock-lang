@@ -1,8 +1,4 @@
-compose
-  struct Point { x: Real, y: Real }
-;
-compose
-  alias Pt Point
-;
+struct Point { x: Real, y: Real };
+alias Pt Point;
 let p = Pt { x: 42, y: 7 };
 p.x

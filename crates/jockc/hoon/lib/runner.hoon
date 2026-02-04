@@ -47,12 +47,16 @@
   |=  =cord
   ^-  *
   ~|  %nock
+  =/  nok  (mint:~(. jock libs) cord)
+  ~&  %nock-compiled
   =/  res=(unit *)
     %-  mole
     |.
-    .*(%0 (mint:~(. jock libs) cord))
+    .*(0 nok)
   ?~  res
-    *nock:jock
+    ~&  %nock-crashed
+    0
+  ~&  nock-result+u.res
   u.res
 ::
 ++  exec

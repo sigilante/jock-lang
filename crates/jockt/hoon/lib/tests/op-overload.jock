@@ -1,0 +1,10 @@
+trait Add(+) { add; };
+trait Sub(-) { sub; };
+struct PointState { x: Real, y: Real };
+class Point(PointState) impl Add, Sub {
+  add(self: Self, p: Self) -> Self { ( self.x + p.x  self.y + p.y ) }
+  sub(self: Self, p: Self) -> Self { ( self.x - p.x  self.y - p.y ) }
+};
+let p = Point { x: 101, y: 105 };
+let q = Point { x: 42, y: 7 };
+p + q

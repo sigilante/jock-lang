@@ -1,0 +1,9 @@
+struct Vectre { x: Real, y: Real, z: Real };
+alias Point Vectre;
+class Body(Vectre) {
+  getx(self: Vectre) -> Real {
+    self.x
+  }
+};
+let p = Point { x: 10, y: 20, z: 30 };
+p.z

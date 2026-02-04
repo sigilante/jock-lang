@@ -1,6 +1,4 @@
-compose
-  struct Point { x: Real, y: Real }
-;
+struct Point { x: Real, y: Real };
 func identity(p: Point) -> Point {
   p
 };

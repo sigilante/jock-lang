@@ -1,0 +1,17 @@
+alias Wire Path;
+
+struct Input { eny: Atom, our: Hex, now: Date, cause: * };
+
+trait Kernel { load; peek; poke; };
+
+struct CounterState { count: Real };
+
+class Counter(CounterState) impl Kernel {
+  load(self: CounterState, old: CounterState) -> CounterState { old }
+  peek(self: CounterState, path: Path) -> ??* { ~ }
+  poke(self: CounterState, input: Input) -> * {
+    ( ~ CounterState { count: self.count + 1 } )
+  }
+};
+
+Counter { count: 0 }
