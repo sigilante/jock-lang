@@ -2541,7 +2541,11 @@
         =/  resolve-one
           |=  j=jype
           ^-  jype
-          ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+          ?.  ?=(@ -<.j)
+            =/  sub-a=jype  $(j p.j)
+            =/  sub-b=jype  $(j q.j)
+            [[sub-a sub-b] name.j]
+          ?.  ?=(%limb -.p.j)  j
           ::  Self resolves to the class state type
           ?:  =(~[[%type 'Self']] p.p.j)
             resolved-state(name name.j)
@@ -2555,14 +2559,7 @@
         =/  lam=jock  body.arm
         ?.  ?=(%lambda -.lam)  arm
         ?~  inp.arg.p.lam  arm
-        =/  inp-jyp=jype  u.inp.arg.p.lam
-        =.  u.inp.arg.p.lam
-          ::  single jype: resolve directly; cell jype: resolve each half
-          ?.  ?=(^ -<.inp-jyp)
-            (resolve-one inp-jyp)
-          =/  sub-a=jype  (resolve-one -.-.inp-jyp)
-          =/  sub-b=jype  (resolve-one +.-.inp-jyp)
-          [[sub-a sub-b] +.inp-jyp]
+        =.  u.inp.arg.p.lam  (resolve-one u.inp.arg.p.lam)
         =.  out.arg.p.lam  (resolve-one out.arg.p.lam)
         arm(body lam)
       ::  door sample
@@ -3210,18 +3207,16 @@
       =/  resolve-one
         |=  j=jype
         ^-  jype
-        ?.  ?&(?=(@ -<.j) ?=(%limb -.p.j))  j
+        ?.  ?=(@ -<.j)
+          =/  sub-a=jype  $(j p.j)
+          =/  sub-b=jype  $(j q.j)
+          [[sub-a sub-b] name.j]
+        ?.  ?=(%limb -.p.j)  j
         =/  lim  (~(get-limb jt jyp) p.p.j)
         ?~  lim  j
         ?.  ?=(%& -.u.lim)  j
         p.p.u.lim(name name.j)
-      =.  u.inp.arg.p.j
-        =/  inp-jyp=jype  u.inp.arg.p.j
-        ?.  ?=(^ -<.inp-jyp)
-          (resolve-one inp-jyp)
-        =/  sub-a=jype  (resolve-one -.-.inp-jyp)
-        =/  sub-b=jype  (resolve-one +.-.inp-jyp)
-        [[sub-a sub-b] +.inp-jyp]
+      =.  u.inp.arg.p.j  (resolve-one u.inp.arg.p.j)
       =.  out.arg.p.j  (resolve-one out.arg.p.j)
       =/  input-default  (type-to-default u.inp.arg.p.j)
       ~|  %enter-lambda-body
