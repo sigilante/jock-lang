@@ -469,6 +469,7 @@
       [%atom p=jatom]
       [%noun p=jnoun]
       [%list type=jype-leaf val=(list jock)]
+      [%map type=jype-leaf val=(map jock jock)]
       [%set type=jype-leaf val=(set jock)]
       [%import pos=hair name=jype next=jock]
       [%crash ~]  :: keep last for Hoon type bunting
@@ -556,6 +557,8 @@
       [%fork p=jype q=jype]
       ::  %list
       [%list type=jype]
+      ::  %map
+      [%map key=jype val=jype]
       ::  %noun
       [%noun p=jnoun-type]
       ::  %set
@@ -742,11 +745,12 @@
         %type        (match-start-name tokens)
     ==
   ::  -- postfix indexing loop: expr[index]
-  ::  Only index after names/calls/parens, not after list/set literals
+  ::  Only index after names/calls/parens, not after list/set/map literals
   |-
   ?:  =(~ tokens)  [lock tokens]
   ?.  ?&  (has-punctuator -.tokens %'[')
           !?=(%list -.lock)
+          !?=(%map -.lock)
           !?=(%set -.lock)
       ==
     ::  not indexing, fall through to cast/comparator/operator checks
@@ -960,11 +964,38 @@
     =^  arg  tokens
       (match-block [tokens %'(' %')'] match-inner-jock)  ::  XXX not '('
     [[%call pos.first [%limb axis-lit ~] `arg] tokens]
-  ::  Set  {1 2 3}
+  ::  Set or Map: {1, 2, 3} or {1 -> "a", 2 -> "b"}
       %'{'
-    ::  {one
+    ::  Empty case: {} is empty set
+    ?:  (has-punctuator -.tokens %'}')
+      :_  +.tokens
+      [%set [%none ~] ~]
+    ::  Parse first element
     =^  jock-one  tokens
       (match-inner-jock tokens)
+    ::  Check for -> to determine if this is a map
+    ?:  (has-punctuator -.tokens %'->')
+      ::  MAP: {key -> value, ...}
+      =.  tokens  +.tokens  :: skip ->
+      =^  val-one  tokens
+        (match-inner-jock tokens)
+      =/  acc=(map jock jock)
+        (~(put by *(map jock jock)) jock-one val-one)
+      |-  ^-  [jock (list token)]
+      ?:  (has-punctuator -.tokens %'}')
+        :_  +.tokens
+        [%map [%none ~] acc]
+      ::  Skip optional comma
+      =?  tokens  (has-punctuator -.tokens %',')  +.tokens
+      ?:  (has-punctuator -.tokens %'}')
+        :_  +.tokens
+        [%map [%none ~] acc]
+      =^  key  tokens  (match-inner-jock tokens)
+      ?>  (got-punctuator -.tokens %'->')
+      =.  tokens  +.tokens
+      =^  val  tokens  (match-inner-jock tokens)
+      $(acc (~(put by acc) key val))
+    ::  SET: {elem, elem, ...} (existing logic)
     =/  acc=(set jock)
       (sy jock-one ~)
     |-  ^-  [jock (list token)]
@@ -975,6 +1006,11 @@
       :+  %set
         [%none ~]
       acc
+    ::  Skip optional comma for sets too
+    =?  tokens  (has-punctuator -.tokens %',')  +.tokens
+    ?:  (has-punctuator -.tokens %'}')
+      :_  +.tokens
+      [%set [%none ~] acc]
     ::  {...}
     =^  jock-nex  tokens
       (match-inner-jock tokens)
@@ -1130,7 +1166,7 @@
     ::  Short-circuits on built-in container types
     ?:  =([%type 'List'] +.-.tokens)  %list
     ?:  =([%type 'Set'] +.-.tokens)   %set
-    :: ?:  =([%type 'Map'] +.-.tokens)   %map
+    ?:  =([%type 'Map'] +.-.tokens)   %map
     ?>  ?=([%type cord] +.-.tokens)
     +.+.-.tokens
   =/  nom  (get-name -.tokens)
@@ -1168,6 +1204,10 @@
   ?>  (got-punctuator -.tokens %')')
   ?:  ?=(%list type)  [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
   ?:  ?=(%set type)  [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
+  ::  Map requires two type parameters: Map(Key, Value)
+  ?:  ?=(%map type)
+    ?>  ?=(^ -<.jyp)  :: must be a cell (two types)
+    [[[%map p.jyp q.jyp] u.nom] +.tokens]
   [[[%state jyp] u.nom] +.tokens]
 ::
 ++  match-keyword
@@ -2306,6 +2346,11 @@
         :+  %8
           :^  %9  +<+<.qmin  %0  -.ljw
         [%9 2 %10 [6 [%7 [%0 3] arg]] %0 2]
+      ::  Map indexing: TODO - requires generating ~(get by map) nock
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%map -.p.expr-jyp)
+          ==
+        ~|('map indexing not yet supported' !!)
       ::  Tuple (cell jype): compute axis at compile time.
       ::  Index must be a literal number.
       =/  n=@  (get-index-number idx.j)
@@ -3361,6 +3406,30 @@
         vals  +.vals
       ==
     ::
+        %map
+      ~|  %map
+      =/  pairs=(list (pair jock jock))  ~(tap by val.j)
+      ::  Empty map
+      ?:  =(~ pairs)
+        :_  [[%map [%none ~]^%$ [%none ~]^%$] %$]
+        [%1 ~]
+      ::  Compile first pair to infer types
+      =+  [key key-jyp]=$(j -.-.pairs)
+      =+  [val val-jyp]=$(j +.-.pairs)
+      ::  Build map at compile-time using Hoon's ~(put by)
+      =/  res=(map * *)  (~(put by *(map * *)) key val)
+      =.  pairs  +.pairs
+      :_  [[%map key-jyp val-jyp] %$]
+      |-  ^-  nock
+      ?~  pairs
+        [%1 `*`res]
+      =+  [key key-jyp]=^$(j -.-.pairs)
+      =+  [val val-jyp]=^$(j +.-.pairs)
+      %=  $
+        res    (~(put by res) key val)
+        pairs  +.pairs
+      ==
+    ::
         %atom
       ::  [%atom [type value] flag]
       ~|  [%atom +<+.j]
@@ -3494,6 +3563,8 @@
     ::
         %list      [%1 0]
     ::
+        %map       [%1 ~]  :: Empty map is null
+    ::
         %set       [%1 0]
     ::
         %hoon      [%1 0]
@@ -3605,6 +3676,12 @@
         ::  Sets are a tree of values, which must be in the same order as Hoon.
         ::  [%set type=jype-leaf val=(set jock)]
         ~|  %set
+        !!
+      ::
+          %map
+        ::  Maps are a tree of key-value pairs, which must be in the same order as Hoon.
+        ::  [%map type=jype-leaf val=(map jock jock)]
+        ~|  %map
         !!
       ==
     [%cncl p q]
@@ -3718,6 +3795,11 @@
       ::
         %list
       ::  A list is either ~ (atom 0) or [item rest].
+      ::  Just check it's either an atom or a cell (anything is valid).
+      [%1 0]
+      ::
+        %map
+      ::  A map is either ~ (null) or a tree node.
       ::  Just check it's either an atom or a cell (anything is valid).
       [%1 0]
       ::
