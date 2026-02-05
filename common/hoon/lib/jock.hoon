@@ -3111,20 +3111,24 @@
       ::
       ::  Other comparators must map into Hoon itself.
           %'>'
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %gth]]] arg=`[a.j b.j]]
-        -:$(j j)
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j b.j)
+        (make-hoon-binop %gth a b)
       ::
           %'<'
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %lth]]] arg=`[a.j b.j]]
-        -:$(j j)
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j b.j)
+        (make-hoon-binop %lth a b)
       ::
           %'<='
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %lte]]] arg=`[a.j b.j]]
-        -:$(j j)
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j b.j)
+        (make-hoon-binop %lte a b)
       ::
           %'>='
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %gte]]] arg=`[a.j b.j]]
-        -:$(j j)
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j b.j)
+        (make-hoon-binop %gte a b)
       ==
     ::
         %operator
@@ -3176,43 +3180,51 @@
       ?-    op.j
           %'+'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %add]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %add a b)
+      ::
           %'-'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %sub]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %sub a b)
+      ::
           %'*'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %mul]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %mul a b)
+      ::
           %'×'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %mul]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %mul a b)
+      ::
           %'/'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %div]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %div a b)
+      ::
           %'%'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %mod]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %mod a b)
+      ::
           %'**'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %pow]]] arg=`[a.j u.b.j]]
-        -:$(j j)
-        ::
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %pow a b)
+      ::
           %'÷'
         ?~  b.j  !!
-        =/  j=jock  [%call [0 0] [%limb p=~[[%name %hoon] [%name %div]]] arg=`[a.j u.b.j]]
-        -:$(j j)
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        (make-hoon-binop %div a b)
         ::  Overload-only operators: crash if no trait mapping found
           %'±'   ~|('± requires operator overload via trait' !!)
           %'⊕'   ~|('⊕ requires operator overload via trait' !!)
@@ -3805,5 +3817,23 @@
     :+  %8
       :^  %9  +<+<.qmin  %0  -.ljw
     [%9 2 %10 [6 [%7 [%0 3] val]] %0 2]
+  ::
+  ++  make-hoon-binop
+    |=  [arm=term a=nock b=nock]
+    ^-  nock
+    ::  Generate Nock to call hoon.<arm>(a, b) at runtime
+    =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+    ?~  lim  ~|('hoon library not found for binop' !!)
+    ?>  ?=(%| -.u.lim)
+    =/  typ=jype  p.p.u.lim
+    =/  ljw=(list jwing)  r.p.u.lim
+    =+  ast=(j2h ~[[%name arm]] ~)
+    ?>  ?=(%hoon -<.typ)
+    =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+    =/  qmin  ;;(nock q.min)
+    ;;  nock
+    :+  %8
+      :^  %9  +<+<.qmin  %0  -.ljw
+    [%9 2 %10 [6 [%7 [%0 3] [a b]]] %0 2]
   --
 --
