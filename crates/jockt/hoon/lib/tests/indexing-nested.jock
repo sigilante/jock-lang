@@ -1,2 +1,4 @@
+// Test nested list indexing
 let b:List(List(@)) = [[10 20] [30 40] [50 60]];
-b[1][0]
+let inner:List(@) = b[1];
+inner[0]

@@ -6,7 +6,7 @@
 +$  test-state  [%0 ~]
 ++  moat  (keep test-state)
 +$  cause
-  $%  [%jock name=@t text=@t args=(list @) libs-list=(list (pair term cord))]
+  $%  [%jock name=@t text=@t args=(list @) libs-list=(list (pair term cord)) dbg=?]
   ==
 +$  effect  ~
 --
@@ -42,14 +42,15 @@
   =/  args  (turn args.cau (cury scot %ud))
   =/  code  (preprocess text.cau args)
   =/  libs  `(map term cord)`(malt libs-list.cau)
+  =/  dbg  dbg.cau
   ~&  libs+(turn ~(tap by libs) |=([k=term v=cord] k))
   ~&  code+[code]
-  ~&  parse+(parse:~(. runner libs) code)
-  ~&  jeam+(jeam:~(. runner libs) code)
-  =/  res  `*`(mint:~(. runner libs) code)
+  ~&  parse+(parse:~(. runner [libs dbg]) code)
+  ~&  jeam+(jeam:~(. runner [libs dbg]) code)
+  =/  res  `*`(mint:~(. runner [libs dbg]) code)
   ~&  mint+res
-  ~&  jype+(jype:~(. runner libs) code)
-  ~&  nock+(nock:~(. runner libs) code)
+  ~&  jype+(jype:~(. runner [libs dbg]) code)
+  ~&  nock+(nock:~(. runner [libs dbg]) code)
   [~ k]
   ::
   ++  preprocess

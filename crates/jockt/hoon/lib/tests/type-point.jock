@@ -1,22 +1,19 @@
 /*  A class is broadly equivalent to a Hoon door. It has a top-level
     sample which represents its state, along with methods that have
     each their own samples.
-
-    A class must be composed into the subject to be accessible.
 */
-compose
-  class Foo(x:@) {
-    bar(p:@) -> Foo {
-      p
-    }
+struct FooState { x: Real };
+class Foo(FooState) {
+  bar(self: FooState, p: Real) -> Real {
+    p
   }
-; // end compose
+};
 
 //  let name:Type = value;
-let a:Foo = Foo(41);
-//  let name = Type(value);
-let b = Foo(42);
+let a = Foo { x: 41 };
+//  let name = Type { fields };
+let b = Foo { x: 42 };
 //  let name:type = value;
 let c:@ = 43;
 
-(Foo(40) a b c)
+(Foo { x: 40 } a b c)
