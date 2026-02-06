@@ -2339,13 +2339,13 @@
         =/  qmin
           ~|  'failed to validate snag Nock'
           ;;(nock q.min)
-        ::  Compile the argument (idx, expr) pair
-        =+  [arg arg-jyp]=$(j [idx.j expr.j])
+        ::  Compile the index separately, reuse already-compiled expr-nock
+        =+  [idx-nok idx-jyp]=$(j idx.j)
         :_  pjyp
         ;;  nock
         :+  %8
           :^  %9  +<+<.qmin  %0  -.ljw
-        [%9 2 %10 [6 [%7 [%0 3] arg]] %0 2]
+        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
       ::  Map indexing: TODO - requires generating ~(get by map) nock
       ?:  ?&  ?=(@ -<.expr-jyp)
               ?=(%map -.p.expr-jyp)
