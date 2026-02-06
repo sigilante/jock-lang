@@ -37,6 +37,13 @@ struct TestCli {
         num_args = 1
     )]
     lib_path: Option<String>,
+
+    #[arg(
+        long = "debug",
+        help = "Emit source location hints for crash traces",
+        default_value_t = false
+    )]
+    debug: bool,
 }
 
 #[tokio::main]
@@ -113,12 +120,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let texts = vec_to_hoon_tuple_list(&mut slab, lib_texts);
 
+        // Hoon loobean: %.y = 0, %.n = 1
+        let dbg = if cli.debug { D(0) } else { D(1) };
+
         slab.modify(|_root|
             { vec![D(tas!(b"jock")),
                 name.as_noun(),
                 text.as_noun(),
                 args,
-                texts] });
+                texts,
+                dbg] });
         slab
     };
 

@@ -8,13 +8,13 @@
   'lambda (b:@) -> @ {\0a  +(b)\0a}(41)\0a'
 ++  test-tokenize
   %+  expect-eq:test
-    !>  ~[[%keyword %lambda] [%punctuator %'('] [%name %b] [%punctuator %':'] [%punctuator %'@'] [%punctuator %')'] [%punctuator %'-'] [%punctuator %'>'] [%punctuator %'@'] [%punctuator %'{'] [%punctuator %'+'] [%punctuator %'('] [%name %b] [%punctuator %')'] [%punctuator %'}'] [%punctuator %'('] [%literal [[%number p=41] q=%.n]] [%punctuator %')']]
-    !>  (rash text parse-tokens:jock)
+    !>  ^-  (list token-body:jock)  ~[[%keyword %lambda] [%punctuator %'('] [%name %b] [%punctuator %':'] [%punctuator %'@'] [%punctuator %')'] [%punctuator %'-'] [%punctuator %'>'] [%punctuator %'@'] [%punctuator %'{'] [%punctuator %'+'] [%punctuator %'('] [%name %b] [%punctuator %')'] [%punctuator %'}'] [%punctuator %'('] [%literal [[%number p=41] q=%.n]] [%punctuator %')']]
+    !>  `(list token-body:jock)`(turn (rash text parse-tokens:jock) |=(=token:jock +.token))
 ::
 ++  test-jeam
   %+  expect-eq:test
     !>  ^-  jock:jock
-        [%call func=[%lambda p=[arg=[inp=[~ [p=[%atom p=%number q=%.n] name='b']] out=[p=[%atom p=%number q=%.n] name='']] body=[%increment val=[%limb p=~[[%name p=%b]]]] context=~]] arg=[~ [%atom p=[[%number p=41] q=%.n]]]]
+        [%call pos=[0 0] func=[%lambda p=[arg=[inp=[~ [p=[%atom p=%number q=%.n] name='b']] out=[p=[%atom p=%number q=%.n] name='']] body=[%increment val=[%limb p=~[[%name p=%b]]]] context=~]] arg=[~ [%atom p=[[%number p=41] q=%.n]]]]
     !>  (jeam:jock text)
 ::
 ++  test-mint

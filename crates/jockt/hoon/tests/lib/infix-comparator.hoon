@@ -8,8 +8,8 @@
   '(\0a    1 < 0\0a    0 <= 1\0a    0 == 1\0a    1 > 0\0a    0 >= 0\0a    1 != 1\0a)\0a'
 ++  test-tokenize
   %+  expect-eq:test
-    !>  ~[[%punctuator %'('] [%literal [[%number p=1] q=%.n]] [%punctuator %'<'] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=0] q=%.n]] [%punctuator %'<'] [%punctuator %'='] [%literal [[%number p=1] q=%.n]] [%literal [[%number p=0] q=%.n]] [%punctuator %'='] [%punctuator %'='] [%literal [[%number p=1] q=%.n]] [%literal [[%number p=1] q=%.n]] [%punctuator %'>'] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=0] q=%.n]] [%punctuator %'>'] [%punctuator %'='] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=1] q=%.n]] [%punctuator %'!'] [%punctuator %'='] [%literal [[%number p=1] q=%.n]] [%punctuator %')']]
-    !>  (rash text parse-tokens:jock)
+    !>  ^-  (list token-body:jock)  ~[[%punctuator %'('] [%literal [[%number p=1] q=%.n]] [%punctuator %'<'] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=0] q=%.n]] [%punctuator %'<'] [%punctuator %'='] [%literal [[%number p=1] q=%.n]] [%literal [[%number p=0] q=%.n]] [%punctuator %'='] [%punctuator %'='] [%literal [[%number p=1] q=%.n]] [%literal [[%number p=1] q=%.n]] [%punctuator %'>'] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=0] q=%.n]] [%punctuator %'>'] [%punctuator %'='] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=1] q=%.n]] [%punctuator %'!'] [%punctuator %'='] [%literal [[%number p=1] q=%.n]] [%punctuator %')']]
+    !>  `(list token-body:jock)`(turn (rash text parse-tokens:jock) |=(=token:jock +.token))
 ::
 ++  test-jeam
   %+  expect-eq:test
