@@ -461,6 +461,11 @@
       [%cell-check val=jock]
       [%call pos=hair func=jock arg=(unit jock)]
       [%index expr=jock idx=jock]
+      [%index-empty expr=jock]                                   :: expr[]     — stack peek
+      [%index-has expr=jock idx=jock]                            :: expr[idx?] — map/set has
+      [%index-del expr=jock idx=jock]                            :: expr[!idx] — map/set del
+      [%index-pop expr=jock]                                     :: expr[!]    — stack pop
+      [%index-put expr=jock idx=(unit jock) val=jock next=jock]  :: expr[idx]=val / expr[]=val
       [%cast mode=?(%as %as-q %as-x) expr=jock target=jype]
       [%coalesce expr=jock fallback=jock]
       [%bind name=term]
@@ -563,6 +568,8 @@
       [%noun p=jnoun-type]
       ::  %set
       [%set type=jype]
+      ::  %stack
+      [%stack type=jype]
       ::  %hoon is a vase for the supplied subject (presumably hoon or tiny)
       :: [%hoon p=vase]
       [%hoon p=truncated-vase]
@@ -694,9 +701,44 @@
       [%operator u.oc lock `rock]
     ::  no infix operator
     [lock tokens]
-  ::  parse index expression inside [...]
+  ::  parse bracket expression inside [...]
+  =.  tokens  +.tokens  :: skip '['
+  ::  Case 1: empty brackets — expr[]
+  ?:  (has-punctuator -.tokens %']')
+    =.  tokens  +.tokens  :: skip ']'
+    ::  expr[] = val; → set put / stack push
+    ?:  ?&  !=(~ tokens)
+            (has-punctuator -.tokens %'=')
+            !=(~ +.tokens)
+            !((has-punctuator +<.tokens %'='))
+        ==
+      =^  val  tokens
+        (match-inner-jock +.tokens)  :: skip '='
+      ?>  (got-punctuator -.tokens %';')
+      =^  next  tokens
+        (match-jock +.tokens)
+      [[%index-put lock ~ val next] tokens]
+    ::  expr[] → stack peek
+    $(lock [%index-empty lock])
+  ::  Case 2: '!' prefix — expr[!] or expr[!idx]
+  ?:  (has-punctuator -.tokens %'!')
+    =.  tokens  +.tokens  :: skip '!'
+    ?:  (has-punctuator -.tokens %']')
+      ::  expr[!] → stack pop
+      $(lock [%index-pop lock], tokens +.tokens)
+    ::  expr[!idx] → map/set del
+    =^  idx  tokens
+      (match-inner-jock tokens)
+    ?>  (got-punctuator -.tokens %']')
+    $(lock [%index-del lock idx], tokens +.tokens)
+  ::  Case 3: normal expression — expr[idx], expr[idx?], expr[idx]=val
   =^  idx  tokens
-    (match-inner-jock +.tokens)  :: skip '['
+    (match-inner-jock tokens)
+  ::  expr[idx?] → map/set has
+  ?:  (has-punctuator -.tokens %'?')
+    =.  tokens  +.tokens  :: skip '?'
+    ?>  (got-punctuator -.tokens %']')
+    $(lock [%index-has lock idx], tokens +.tokens)
   ::  check for range syntax: expr[start..end]
   ?:  ?&  !=(~ tokens)
           (has-punctuator -.tokens %'.')
@@ -705,11 +747,21 @@
       ==
     ~|("range indexing not yet supported" !!)
   ?>  (got-punctuator -.tokens %']')
-  ::  emit %index node
-  =/  index-expr=jock
-    [%index lock idx]
-  ::  loop to allow chaining: a[0][1]
-  $(lock index-expr, tokens +.tokens)
+  =.  tokens  +.tokens  :: skip ']'
+  ::  expr[idx] = val; → map put
+  ?:  ?&  !=(~ tokens)
+          (has-punctuator -.tokens %'=')
+          !=(~ +.tokens)
+          !((has-punctuator +<.tokens %'='))
+      ==
+    =^  val  tokens
+      (match-inner-jock +.tokens)  :: skip '='
+    ?>  (got-punctuator -.tokens %';')
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%index-put lock `idx val next] tokens]
+  ::  expr[idx] → get (existing behavior)
+  $(lock [%index lock idx])
 ::
 ++  splice-jock
   |=  [lib=jock nex=jock]
@@ -719,6 +771,8 @@
   ?:  ?=(%func -.lib)
     lib(next $(lib next.lib))
   ?:  ?=(%let -.lib)
+    lib(next $(lib next.lib))
+  ?:  ?=(%index-put -.lib)
     lib(next $(lib next.lib))
   nex
 ::
@@ -752,6 +806,7 @@
           !?=(%list -.lock)
           !?=(%map -.lock)
           !?=(%set -.lock)
+          !?=(%stack -.lock)
       ==
     ::  not indexing, fall through to cast/comparator/operator checks
     ?:  =(~ tokens)  [lock tokens]
@@ -820,9 +875,44 @@
       [[%operator op lock `rock] tokens]
     ::  no infix operator
     [lock tokens]
-  ::  parse index expression inside [...]
+  ::  parse bracket expression inside [...]
+  =.  tokens  +.tokens  :: skip '['
+  ::  Case 1: empty brackets — expr[]
+  ?:  (has-punctuator -.tokens %']')
+    =.  tokens  +.tokens  :: skip ']'
+    ::  expr[] = val; → set put / stack push
+    ?:  ?&  !=(~ tokens)
+            (has-punctuator -.tokens %'=')
+            !=(~ +.tokens)
+            !((has-punctuator +<.tokens %'='))
+        ==
+      =^  val  tokens
+        (match-inner-jock +.tokens)  :: skip '='
+      ?>  (got-punctuator -.tokens %';')
+      =^  next  tokens
+        (match-jock +.tokens)
+      [[%index-put lock ~ val next] tokens]
+    ::  expr[] → stack peek
+    $(lock [%index-empty lock])
+  ::  Case 2: '!' prefix — expr[!] or expr[!idx]
+  ?:  (has-punctuator -.tokens %'!')
+    =.  tokens  +.tokens  :: skip '!'
+    ?:  (has-punctuator -.tokens %']')
+      ::  expr[!] → stack pop
+      $(lock [%index-pop lock], tokens +.tokens)
+    ::  expr[!idx] → map/set del
+    =^  idx  tokens
+      (match-inner-jock tokens)
+    ?>  (got-punctuator -.tokens %']')
+    $(lock [%index-del lock idx], tokens +.tokens)
+  ::  Case 3: normal expression — expr[idx], expr[idx?], expr[idx]=val
   =^  idx  tokens
-    (match-inner-jock +.tokens)  :: skip '['
+    (match-inner-jock tokens)
+  ::  expr[idx?] → map/set has
+  ?:  (has-punctuator -.tokens %'?')
+    =.  tokens  +.tokens  :: skip '?'
+    ?>  (got-punctuator -.tokens %']')
+    $(lock [%index-has lock idx], tokens +.tokens)
   ::  check for range syntax: expr[start..end]
   ?:  ?&  !=(~ tokens)
           (has-punctuator -.tokens %'.')
@@ -831,11 +921,21 @@
       ==
     ~|("range indexing not yet supported" !!)
   ?>  (got-punctuator -.tokens %']')
-  ::  emit %index node
-  =/  index-expr=jock
-    [%index lock idx]
-  ::  loop to allow chaining: a[0][1]
-  $(lock index-expr, tokens +.tokens)
+  =.  tokens  +.tokens  :: skip ']'
+  ::  expr[idx] = val; → map put
+  ?:  ?&  !=(~ tokens)
+          (has-punctuator -.tokens %'=')
+          !=(~ +.tokens)
+          !((has-punctuator +<.tokens %'='))
+      ==
+    =^  val  tokens
+      (match-inner-jock +.tokens)  :: skip '='
+    ?>  (got-punctuator -.tokens %';')
+    =^  next  tokens
+      (match-jock +.tokens)
+    [[%index-put lock `idx val next] tokens]
+  ::  expr[idx] → get (existing behavior)
+  $(lock [%index lock idx])
 ::
 ++  match-pair-inner-jock
   |=  =tokens
@@ -1164,9 +1264,10 @@
     ~|("expect type. token: {<-.tokens>}" !!)
   =/  type=cord
     ::  Short-circuits on built-in container types
-    ?:  =([%type 'List'] +.-.tokens)  %list
-    ?:  =([%type 'Set'] +.-.tokens)   %set
-    ?:  =([%type 'Map'] +.-.tokens)   %map
+    ?:  =([%type 'List'] +.-.tokens)   %list
+    ?:  =([%type 'Set'] +.-.tokens)    %set
+    ?:  =([%type 'Map'] +.-.tokens)    %map
+    ?:  =([%type 'Stack'] +.-.tokens)  %stack
     ?>  ?=([%type cord] +.-.tokens)
     +.+.-.tokens
   =/  nom  (get-name -.tokens)
@@ -1202,8 +1303,9 @@
       [[jyp-one `jyp-two] tokens]
     [?~(q.r `jype`p.r `jype`[[p.r u.q.r] %$]) tokens]
   ?>  (got-punctuator -.tokens %')')
-  ?:  ?=(%list type)  [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
-  ?:  ?=(%set type)  [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
+  ?:  ?=(%list type)   [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
+  ?:  ?=(%set type)    [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
+  ?:  ?=(%stack type)  [[;;(jype-leaf [type jyp]) u.nom] +.tokens]
   ::  Map requires two type parameters: Map(Key, Value)
   ?:  ?=(%map type)
     ?>  ?=(^ -<.jyp)  :: must be a cell (two types)
@@ -2346,11 +2448,48 @@
         :+  %8
           :^  %9  +<+<.qmin  %0  -.ljw
         [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
-      ::  Map indexing: TODO - requires generating ~(get by map) nock
+      ::  Map: generate hoon.map-get call nock directly.
       ?:  ?&  ?=(@ -<.expr-jyp)
               ?=(%map -.p.expr-jyp)
           ==
-        ~|('map indexing not yet supported' !!)
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        =+  ast=(j2h ~[[%name %map-get]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  qmin
+          ~|  'failed to validate map-get Nock'
+          ;;(nock q.min)
+        =+  [idx-nok idx-jyp]=$(j idx.j)
+        :_  [[%fork [%none ~]^%$ val.p.expr-jyp] %$]
+        ;;  nock
+        :+  %8
+          :^  %9  +<+<.qmin  %0  -.ljw
+        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
+      ::  Set: generate hoon.set-get call nock directly.
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%set -.p.expr-jyp)
+          ==
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        =+  ast=(j2h ~[[%name %set-get]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  qmin
+          ~|  'failed to validate set-get Nock'
+          ;;(nock q.min)
+        =+  [idx-nok idx-jyp]=$(j idx.j)
+        :_  [[%fork [%none ~]^%$ type.p.expr-jyp] %$]
+        ;;  nock
+        :+  %8
+          :^  %9  +<+<.qmin  %0  -.ljw
+        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
       ::  Tuple (cell jype): compute axis at compile time.
       ::  Index must be a literal number.
       =/  n=@  (get-index-number idx.j)
@@ -3567,6 +3706,8 @@
     ::
         %set       [%1 0]
     ::
+        %stack     [%1 0]
+    ::
         %hoon      [%1 0]
     ::
         %state     $(j p.p.j)
@@ -3801,6 +3942,14 @@
         %map
       ::  A map is either ~ (null) or a tree node.
       ::  Just check it's either an atom or a cell (anything is valid).
+      [%1 0]
+      ::
+        %set
+      ::  A set is either ~ or a tree node.
+      [%1 0]
+      ::
+        %stack
+      ::  A stack is either ~ or [item rest].
       [%1 0]
       ::
         %struct
