@@ -707,30 +707,29 @@
   ?:  (has-punctuator -.tokens %']')
     =.  tokens  +.tokens  :: skip ']'
     ::  expr[] = val; → set put / stack push
-    ?:  ?&  !=(~ tokens)
-            (has-punctuator -.tokens %'=')
-            !=(~ +.tokens)
-            !((has-punctuator +<.tokens %'='))
-        ==
+    ?:  &(!=(~ tokens) (has-punctuator -.tokens %'='))
+      ?:  &(!=(~ +.tokens) (has-punctuator +<.tokens %'='))
+        ::  '==' comparator, not assignment — treat as peek
+        $(lock ;;(jock [%index-empty lock]))
       =^  val  tokens
         (match-inner-jock +.tokens)  :: skip '='
       ?>  (got-punctuator -.tokens %';')
       =^  next  tokens
         (match-jock +.tokens)
-      [[%index-put lock ~ val next] tokens]
+      [;;(jock [%index-put lock ~ val next]) tokens]
     ::  expr[] → stack peek
-    $(lock [%index-empty lock])
+    $(lock ;;(jock [%index-empty lock]))
   ::  Case 2: '!' prefix — expr[!] or expr[!idx]
   ?:  (has-punctuator -.tokens %'!')
     =.  tokens  +.tokens  :: skip '!'
     ?:  (has-punctuator -.tokens %']')
       ::  expr[!] → stack pop
-      $(lock [%index-pop lock], tokens +.tokens)
+      $(lock ;;(jock [%index-pop lock]), tokens +.tokens)
     ::  expr[!idx] → map/set del
     =^  idx  tokens
       (match-inner-jock tokens)
     ?>  (got-punctuator -.tokens %']')
-    $(lock [%index-del lock idx], tokens +.tokens)
+    $(lock ;;(jock [%index-del lock idx]), tokens +.tokens)
   ::  Case 3: normal expression — expr[idx], expr[idx?], expr[idx]=val
   =^  idx  tokens
     (match-inner-jock tokens)
@@ -738,7 +737,7 @@
   ?:  (has-punctuator -.tokens %'?')
     =.  tokens  +.tokens  :: skip '?'
     ?>  (got-punctuator -.tokens %']')
-    $(lock [%index-has lock idx], tokens +.tokens)
+    $(lock ;;(jock [%index-has lock idx]), tokens +.tokens)
   ::  check for range syntax: expr[start..end]
   ?:  ?&  !=(~ tokens)
           (has-punctuator -.tokens %'.')
@@ -749,19 +748,18 @@
   ?>  (got-punctuator -.tokens %']')
   =.  tokens  +.tokens  :: skip ']'
   ::  expr[idx] = val; → map put
-  ?:  ?&  !=(~ tokens)
-          (has-punctuator -.tokens %'=')
-          !=(~ +.tokens)
-          !((has-punctuator +<.tokens %'='))
-      ==
+  ?:  &(!=(~ tokens) (has-punctuator -.tokens %'='))
+    ?:  &(!=(~ +.tokens) (has-punctuator +<.tokens %'='))
+      ::  '==' comparator, not assignment — treat as get
+      $(lock ;;(jock [%index lock idx]))
     =^  val  tokens
       (match-inner-jock +.tokens)  :: skip '='
     ?>  (got-punctuator -.tokens %';')
     =^  next  tokens
       (match-jock +.tokens)
-    [[%index-put lock `idx val next] tokens]
+    [;;(jock [%index-put lock `idx val next]) tokens]
   ::  expr[idx] → get (existing behavior)
-  $(lock [%index lock idx])
+  $(lock ;;(jock [%index lock idx]))
 ::
 ++  splice-jock
   |=  [lib=jock nex=jock]
@@ -806,7 +804,6 @@
           !?=(%list -.lock)
           !?=(%map -.lock)
           !?=(%set -.lock)
-          !?=(%stack -.lock)
       ==
     ::  not indexing, fall through to cast/comparator/operator checks
     ?:  =(~ tokens)  [lock tokens]
@@ -881,30 +878,29 @@
   ?:  (has-punctuator -.tokens %']')
     =.  tokens  +.tokens  :: skip ']'
     ::  expr[] = val; → set put / stack push
-    ?:  ?&  !=(~ tokens)
-            (has-punctuator -.tokens %'=')
-            !=(~ +.tokens)
-            !((has-punctuator +<.tokens %'='))
-        ==
+    ?:  &(!=(~ tokens) (has-punctuator -.tokens %'='))
+      ?:  &(!=(~ +.tokens) (has-punctuator +<.tokens %'='))
+        ::  '==' comparator, not assignment — treat as peek
+        $(lock ;;(jock [%index-empty lock]))
       =^  val  tokens
         (match-inner-jock +.tokens)  :: skip '='
       ?>  (got-punctuator -.tokens %';')
       =^  next  tokens
         (match-jock +.tokens)
-      [[%index-put lock ~ val next] tokens]
+      [;;(jock [%index-put lock ~ val next]) tokens]
     ::  expr[] → stack peek
-    $(lock [%index-empty lock])
+    $(lock ;;(jock [%index-empty lock]))
   ::  Case 2: '!' prefix — expr[!] or expr[!idx]
   ?:  (has-punctuator -.tokens %'!')
     =.  tokens  +.tokens  :: skip '!'
     ?:  (has-punctuator -.tokens %']')
       ::  expr[!] → stack pop
-      $(lock [%index-pop lock], tokens +.tokens)
+      $(lock ;;(jock [%index-pop lock]), tokens +.tokens)
     ::  expr[!idx] → map/set del
     =^  idx  tokens
       (match-inner-jock tokens)
     ?>  (got-punctuator -.tokens %']')
-    $(lock [%index-del lock idx], tokens +.tokens)
+    $(lock ;;(jock [%index-del lock idx]), tokens +.tokens)
   ::  Case 3: normal expression — expr[idx], expr[idx?], expr[idx]=val
   =^  idx  tokens
     (match-inner-jock tokens)
@@ -912,7 +908,7 @@
   ?:  (has-punctuator -.tokens %'?')
     =.  tokens  +.tokens  :: skip '?'
     ?>  (got-punctuator -.tokens %']')
-    $(lock [%index-has lock idx], tokens +.tokens)
+    $(lock ;;(jock [%index-has lock idx]), tokens +.tokens)
   ::  check for range syntax: expr[start..end]
   ?:  ?&  !=(~ tokens)
           (has-punctuator -.tokens %'.')
@@ -923,19 +919,18 @@
   ?>  (got-punctuator -.tokens %']')
   =.  tokens  +.tokens  :: skip ']'
   ::  expr[idx] = val; → map put
-  ?:  ?&  !=(~ tokens)
-          (has-punctuator -.tokens %'=')
-          !=(~ +.tokens)
-          !((has-punctuator +<.tokens %'='))
-      ==
+  ?:  &(!=(~ tokens) (has-punctuator -.tokens %'='))
+    ?:  &(!=(~ +.tokens) (has-punctuator +<.tokens %'='))
+      ::  '==' comparator, not assignment — treat as get
+      $(lock ;;(jock [%index lock idx]))
     =^  val  tokens
       (match-inner-jock +.tokens)  :: skip '='
     ?>  (got-punctuator -.tokens %';')
     =^  next  tokens
       (match-jock +.tokens)
-    [[%index-put lock `idx val next] tokens]
+    [;;(jock [%index-put lock `idx val next]) tokens]
   ::  expr[idx] → get (existing behavior)
-  $(lock [%index lock idx])
+  $(lock ;;(jock [%index lock idx]))
 ::
 ++  match-pair-inner-jock
   |=  =tokens
@@ -1298,6 +1293,8 @@
       ?:  (has-punctuator -.tokens %')')
         ::  short-circuit if single element in cell
         [[jyp-one ~] tokens]
+      =?  tokens  (has-punctuator -.tokens %',')
+        +.tokens  :: skip ','
       =^  jyp-two  tokens  (match-jype tokens)
       ::  TODO: support implicit right-association  (what's a good test case?)
       [[jyp-one `jyp-two] tokens]
@@ -3609,6 +3606,26 @@
     ::
         %bind
       ~|  '%bind: only valid as a match case pattern'
+      !!
+    ::
+        %index-empty
+      ~|  '%index-empty: not yet implemented'
+      !!
+    ::
+        %index-has
+      ~|  '%index-has: not yet implemented'
+      !!
+    ::
+        %index-del
+      ~|  '%index-del: not yet implemented'
+      !!
+    ::
+        %index-pop
+      ~|  '%index-pop: not yet implemented'
+      !!
+    ::
+        %index-put
+      ~|  '%index-put: not yet implemented'
       !!
     ==
   ::
