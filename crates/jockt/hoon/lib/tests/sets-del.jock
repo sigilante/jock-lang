@@ -1,0 +1,11 @@
+// Test set del operation
+let a:Set(@) = {1, 2, 3};
+
+// Delete existing element
+let b = a.del(1);
+let c = a.del(2);
+
+// Delete missing element
+let d = a.del(999);
+
+(a b c d)

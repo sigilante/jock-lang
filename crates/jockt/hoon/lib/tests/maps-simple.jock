@@ -1,0 +1,4 @@
+// Minimal map test
+let a = {1 -> 100};
+let b = a.put(2, 200);
+b
