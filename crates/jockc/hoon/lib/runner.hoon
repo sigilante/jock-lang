@@ -48,8 +48,6 @@
   ^-  *
   ~|  %nock
   =/  nok  (mint:~(. jock [libs dbg]) cord)
-  ~&  [%nock-is-atom ?@(nok %.y %.n)]
-  ~&  [%nok-head-is-atom ?@(-.nok %.y %.n)]
   =/  res=(unit *)
     %-  mole
     |.
