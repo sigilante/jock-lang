@@ -48,7 +48,6 @@
   ^-  *
   ~|  %nock
   =/  nok  (mint:~(. jock [libs dbg]) cord)
-  ~&  %nock-compiled
   =/  res=(unit *)
     %-  mole
     |.
@@ -56,7 +55,6 @@
   ?~  res
     ~&  %nock-crashed
     0
-  ~&  nock-result+u.res
   u.res
 ::
 ++  exec

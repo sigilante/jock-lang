@@ -616,15 +616,26 @@
 ::
 ::  Map/Set helpers for Jock bracket syntax
 ::
-++  map-get   |*([b=* a=(tree (pair))] (~(get by a) b))
+++  map-get
+  |*  [b=* a=(tree (pair))]
+  |-
+  ^-  *
+  ?~  a  ~
+  ?:  =(b p.n.a)  `q.n.a
+  =/  lft  $(a l.a)
+  ?^  lft  lft
+  $(a r.a)
 ++  map-put   |*([b=* c=* a=(tree (pair))] (~(put by a) b c))
 ++  map-del   |*([b=* a=(tree (pair))] (~(del by a) b))
-++  map-has   |*([b=* a=(tree (pair))] !=(~ (~(get by a) b)))
+++  map-has   |*([b=* a=(tree (pair))] !=(~ (map-get b a)))
 ++  set-get
   |*  [b=* a=(tree)]
+  |-
+  ^-  *
   ?~  a  ~
   ?:  =(b n.a)  `n.a
-  ?:  (gor b n.a)  $(a l.a)
+  =/  lft  $(a l.a)
+  ?^  lft  lft
   $(a r.a)
 ++  set-put   |*([b=* a=(tree)] (~(put in a) b))
 ++  set-del   |*([b=* a=(tree)] (~(del in a) b))

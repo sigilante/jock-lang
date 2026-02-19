@@ -3515,7 +3515,7 @@
       ~|  %set
       =/  vals=(list jock)  ~(tap in val.j)
       ?:  =(~ vals)  ~|  'set: no value'  !!
-      =+  [val val-jyp]=$(j -.vals)
+      =+  [val-nock val-jyp]=$(j -.vals)
       ::  XXX right now this means the val-jyp is %none and will be overridden
       =/  inferred-type
         (~(unify jt type.j^%$) val-jyp)
@@ -3523,22 +3523,24 @@
         ~|  '%set: value type does not nest in declared type'
         ~|  ['have:' val-jyp 'need:' type.j]
         !!
-      ::  At this point, we have a (set jock), not a (set *) of the values
-      =/  res=(set *)  (~(put in *(set *)) val)
+      ::  Extract actual value from [%1 val] constant Nock formula
+      ?>  ?=([%1 *] val-nock)
+      =/  res=(set *)  (~(put in *(set *)) p.val-nock)
       =.  vals  +.vals
       :_  [[%set u.inferred-type] %$]
       |-  ^-  nock
       ?~  vals
         [%1 `*`res]
-      =+  [val val-jyp]=^$(j -.vals)
+      =+  [val-nock val-jyp]=^$(j -.vals)
       =/  inferred-type
         (~(unify jt type.j^%$) val-jyp)
       ?~  inferred-type
         ~|  '%set: value type does not nest in declared type'
         ~|  ['have:' val-jyp 'need:' type.j]
         !!
+      ?>  ?=([%1 *] val-nock)
       %=  $
-        res   (~(put in res) val)
+        res   (~(put in res) p.val-nock)
         vals  +.vals
       ==
     ::
@@ -3550,19 +3552,24 @@
         :_  [[%map [%none ~]^%$ [%none ~]^%$] %$]
         [%1 ~]
       ::  Compile first pair to infer types
-      =+  [key key-jyp]=$(j -.-.pairs)
-      =+  [val val-jyp]=$(j +.-.pairs)
+      =+  [key-nock key-jyp]=$(j -.-.pairs)
+      =+  [val-nock val-jyp]=$(j +.-.pairs)
       ::  Build map at compile-time using Hoon's ~(put by)
-      =/  res=(map * *)  (~(put by *(map * *)) key val)
+      ::  Extract actual values from [%1 val] constant Nock formulas
+      ?>  ?=([%1 *] key-nock)
+      ?>  ?=([%1 *] val-nock)
+      =/  res=(map * *)  (~(put by *(map * *)) p.key-nock p.val-nock)
       =.  pairs  +.pairs
       :_  [[%map key-jyp val-jyp] %$]
       |-  ^-  nock
       ?~  pairs
         [%1 `*`res]
-      =+  [key key-jyp]=^$(j -.-.pairs)
-      =+  [val val-jyp]=^$(j +.-.pairs)
+      =+  [key-nock key-jyp]=^$(j -.-.pairs)
+      =+  [val-nock val-jyp]=^$(j +.-.pairs)
+      ?>  ?=([%1 *] key-nock)
+      ?>  ?=([%1 *] val-nock)
       %=  $
-        res    (~(put by res) key val)
+        res    (~(put by res) p.key-nock p.val-nock)
         pairs  +.pairs
       ==
     ::
