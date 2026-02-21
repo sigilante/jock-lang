@@ -2,7 +2,7 @@
 
 # Jock, a friendly and practical programming language
 
-This is a developer preview of Jock, a friendly programming language that compiles to the [Nock instruction set architecture](#nock).
+**Status February 2026**  Jock was originally developed under the auspices of [Zorp Corp](https://github.com/zorp-corp), the primary developers of Nockchain.  They released a developer preview and sponsored Jock's development to an alpha release before dropping it from the NockApp roadmap.  However, many more features were planned for the Jock beta release and these are now underway.
 
 - [Jock language site](https://jock.org)
 - [@JockNockISA on X](https://x.com/JockNockISA)
@@ -171,3 +171,4 @@ If you are developing Jock itself, you should use the Jock testing tool `jockt` 
 
 - [0.0.0-dp, Developer Preview](https://zorp.io/blog/jock), ~2024.10.24
 - 0.1.0-alpha, ~2025.6.26
+- 0.2.0-beta, ongoing by @sigilante
