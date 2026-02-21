@@ -2,13 +2,16 @@
 let a = {1 -> 100, 2 -> 200};
 
 // Add new key
-let b = a.put(3, 300);
+a[3] = 300;
+let b = a;
 
-// Update existing key
-let c = a.put(1, 999);
+// Update existing key (start fresh)
+let a = {1 -> 100, 2 -> 200};
+a[1] = 999;
+let c = a;
 
 // Put into empty map
 let d = {->};
-let e = d.put(1, 100);
+d[1] = 100;
 
-(a b c d e)
+(b c d)

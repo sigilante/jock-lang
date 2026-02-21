@@ -3514,7 +3514,9 @@
         %set
       ~|  %set
       =/  vals=(list jock)  ~(tap in val.j)
-      ?:  =(~ vals)  ~|  'set: no value'  !!
+      ?:  =(~ vals)
+        :_  [[%set type.j^%$] %$]
+        [%1 ~]
       =+  [val-nock val-jyp]=$(j -.vals)
       ::  XXX right now this means the val-jyp is %none and will be overridden
       =/  inferred-type
@@ -3724,8 +3726,70 @@
       !!
     ::
         %index-put
-      ~|  '%index-put: not yet implemented'
-      !!
+      ::  expr must be a direct variable reference (limb) for slot update
+      ~|  '%index-put: expr must be a variable reference'
+      ?>  ?=(%limb -.expr.j)
+      =/  inst-res  (~(get-limb jt jyp) p.expr.j)
+      ?~  inst-res  ~|('%index-put: variable not found' !!)
+      ?>  ?=(%& -.u.inst-res)
+      ?>  ?=(^ q.p.u.inst-res)
+      ?>  ?=(@ i.q.p.u.inst-res)
+      =/  inst-jyp=jype  p.p.u.inst-res
+      =/  inst-axi=@     i.q.p.u.inst-res
+      ?:  ?&  ?=(@ -<.inst-jyp)
+              ?=(%fork -.p.inst-jyp)
+          ==
+        ~|('cannot put into a union type; use match first' !!)
+      ::  Map put: a[key] = val;
+      ?:  ?&  ?=(@ -<.inst-jyp)
+              ?=(%map -.p.inst-jyp)
+          ==
+        ?>  ?=(^ idx.j)
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        =+  ast=(j2h ~[[%name %map-put]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  qmin
+          ~|  'failed to validate map-put Nock'
+          ;;(nock q.min)
+        =+  [idx-nok idx-jyp]=$(j u.idx.j)
+        =+  [val-nok val-jyp]=$(j val.j)
+        =/  put-nok=nock
+          ;;  nock
+          :+  %8
+            :^  %9  +<+<.qmin  %0  -.ljw
+          [%9 2 %10 [6 [%7 [%0 3] [idx-nok val-nok [%0 inst-axi]]]] %0 2]
+        =+  [nex nex-jyp]=$(j next.j)
+        [[%7 [%10 [inst-axi put-nok] %0 1] nex] nex-jyp]
+      ::  Set put: a[] = val;
+      ?:  ?&  ?=(@ -<.inst-jyp)
+              ?=(%set -.p.inst-jyp)
+          ==
+        ?>  =(~ idx.j)
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        =+  ast=(j2h ~[[%name %set-put]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  qmin
+          ~|  'failed to validate set-put Nock'
+          ;;(nock q.min)
+        =+  [val-nok val-jyp]=$(j val.j)
+        =/  put-nok=nock
+          ;;  nock
+          :+  %8
+            :^  %9  +<+<.qmin  %0  -.ljw
+          [%9 2 %10 [6 [%7 [%0 3] [val-nok [%0 inst-axi]]]] %0 2]
+        =+  [nex nex-jyp]=$(j next.j)
+        [[%7 [%10 [inst-axi put-nok] %0 1] nex] nex-jyp]
+      ~|('index-put requires a Map or Set type' !!)
     ==
   ::
   ++  get-index-number

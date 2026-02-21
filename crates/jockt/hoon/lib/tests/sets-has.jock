@@ -2,10 +2,10 @@
 let a:Set(@) = {1, 2, 3};
 
 // Has existing element
-let b = a.has(1);
-let c = a.has(2);
+let b = a[1?];
+let c = a[2?];
 
 // Has missing element
-let d = a.has(999);
+let d = a[999?];
 
-(a b c d)
+(b c d)

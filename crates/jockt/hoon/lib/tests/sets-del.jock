@@ -2,10 +2,10 @@
 let a:Set(@) = {1, 2, 3};
 
 // Delete existing element
-let b = a.del(1);
-let c = a.del(2);
+let b = a[!1];
+let c = b[!2];
 
-// Delete missing element
-let d = a.del(999);
+// Delete missing element (no-op)
+let d = a[!999];
 
 (a b c d)

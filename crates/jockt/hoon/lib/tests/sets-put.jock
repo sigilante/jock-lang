@@ -2,13 +2,16 @@
 let a:Set(@) = {1, 2, 3};
 
 // Add new element
-let b = a.put(4);
+a[] = 4;
+let b = a;
 
-// Add existing element (should be idempotent)
-let c = a.put(1);
+// Start fresh, add existing (idempotent)
+let a:Set(@) = {1, 2, 3};
+a[] = 1;
+let c = a;
 
 // Put into empty set
 let d:Set(@) = {};
-let e = d.put(1);
+d[] = 1;
 
-(a b c d e)
+(b c d)

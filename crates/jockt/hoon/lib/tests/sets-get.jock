@@ -1,11 +1,11 @@
 // Test set get operation (returns Option)
 let a:Set(@) = {1, 2, 3};
 
-// Get existing element
-let b = a.get(1);
-let c = a.get(2);
+// Get existing element (returns [~ val])
+let b = a[1];
+let c = a[2];
 
-// Get missing element
-let d = a.get(999);
+// Get missing element (returns ~)
+let d = a[999];
 
-(a b c d)
+(b c d)
