@@ -117,6 +117,8 @@ If you are developing Jock code, you should use the Jock compiler tool `jockc`.
 
 ### `jockt` Jock Test Framework
 
+**Status February 2026** `jockt` is not working during beta development because it relies on the AST which is changing quickly.
+
 If you are developing Jock itself, you should use the Jock testing tool `jockt` to verify behavior.
 
 9. Build the Jock testing tool:
