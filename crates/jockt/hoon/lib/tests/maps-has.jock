@@ -8,4 +8,4 @@ let c = a[2?];
 // Has missing key
 let d = a[999?];
 
-(a b c d)
+(b c d)

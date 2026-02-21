@@ -3670,8 +3670,54 @@
       ~|("index-has requires a Map or Set type" !!)
     ::
         %index-del
-      ~|  '%index-del: blocked on gor/mug jetting'
-      !!
+      =+  [expr-nock expr-jyp]=$(j expr.j)
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%fork -.p.expr-jyp)
+          ==
+        ~|("cannot del from a union type; use match first" !!)
+      ::  Map del
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%map -.p.expr-jyp)
+          ==
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        =+  ast=(j2h ~[[%name %map-del]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  qmin
+          ~|  'failed to validate map-del Nock'
+          ;;(nock q.min)
+        =+  [idx-nok idx-jyp]=$(j idx.j)
+        :_  expr-jyp
+        ;;  nock
+        :+  %8
+          :^  %9  +<+<.qmin  %0  -.ljw
+        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
+      ::  Set del
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?=(%set -.p.expr-jyp)
+          ==
+        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
+        ?~  lim  ~|('hoon library not found' !!)
+        ?>  ?=(%| -.u.lim)
+        =/  typ=jype  p.p.u.lim
+        =/  ljw=(list jwing)  r.p.u.lim
+        =+  ast=(j2h ~[[%name %set-del]] ~)
+        ?>  ?=(%hoon -<.typ)
+        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
+        =/  qmin
+          ~|  'failed to validate set-del Nock'
+          ;;(nock q.min)
+        =+  [idx-nok idx-jyp]=$(j idx.j)
+        :_  expr-jyp
+        ;;  nock
+        :+  %8
+          :^  %9  +<+<.qmin  %0  -.ljw
+        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
+      ~|("index-del requires a Map or Set type" !!)
     ::
         %index-pop
       ~|  '%index-pop: not yet implemented'
