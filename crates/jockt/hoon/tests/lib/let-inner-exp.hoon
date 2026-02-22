@@ -8,13 +8,13 @@
   'let a = 42;\0a\0aa\0a'
 ++  test-tokenize
   %+  expect-eq:test
-    !>  ~[[%keyword %let] [%name %a] [%punctuator %'='] [%literal [[%number p=42] q=%.n]] [%punctuator %';'] [%name %a]]
-    !>  (rash text parse-tokens:jock)
+    !>  ^-  (list token-body:jock)  ~[[%keyword %let] [%name %a] [%punctuator %'='] [%literal [[%number p=42] q=%.n]] [%punctuator %';'] [%name %a]]
+    !>  `(list token-body:jock)`(turn (rash text parse-tokens:jock) |=(=token:jock +.token))
 ::
 ++  test-jeam
   %+  expect-eq:test
     !>  ^-  jock:jock
-        [%let type=[p=[%none p=~] name='a'] val=[%atom p=[[%number p=42] q=%.n]] next=[%limb p=~[[%name p=%a]]]]
+        [%let pos=[0 0] type=[p=[%none p=~] name='a'] val=[%atom p=[[%number p=42] q=%.n]] next=[%limb p=~[[%name p=%a]]]]
     !>  (jeam:jock text)
 ::
 ++  test-mint

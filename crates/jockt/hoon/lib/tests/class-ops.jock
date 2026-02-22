@@ -1,39 +1,10 @@
-compose
-  class Point(x:@ y:@) {
-   add(p:(x:@ y:@)) -> Point {
-     (x + p.x
-      y + p.y)
-   }
+// Test class method call returning parameter
+struct PointState { x: Real, y: Real };
+class Point(PointState) {
+  echo(self: PointState, val: Real) -> Real {
+    val
   }
-;
-
-let point_1 = Point(14 104);
-point_1 = point_1.add(28 38);
-(point_1.x() point_1.y())
-
-/*
-!=
-=>  mini=mini
-=>
-  ^=  door
-  |_  [x=@ y=@]
-  ++  add
-    |=  p=[x=@ y=@]
-    [(add:mini x x.p) (add:mini y y.p)]
-  --
-=/  point-1
-  ~(. door [14 104])
-=.  point-1  ~(. door (add:point-1 [28 38]))
-[+12 +13]:point-1
-
-!=
-=>  mini=mini
-=>
-  ^=  door
-  |_  [x=@ y=@]
-  ++  add
-    |=  p=[x=@ y=@]
-    [(add:mini x x.p) (add:mini y y.p)]
-  --
-~(. door [14 104])
-*/
+};
+let point1 = Point { x: 14, y: 104 };
+let result = point1.echo(42);
+result

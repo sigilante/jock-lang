@@ -2,7 +2,32 @@ use nockapp::driver::Operation;
 use nockapp::{kernel::boot, noun::slab::NounSlab};
 use nockapp::{one_punch_driver, Noun, AtomExt};
 use nockvm::noun::{Atom, D, T};
+use nockvm::jets::hot::HotEntry;
+use nockvm::jets::math::{jet_add, jet_dec, jet_div, jet_dvr, jet_gte, jet_gth, jet_lte, jet_lth, jet_mod, jet_mul, jet_sub};
+use nockvm::jets::hash::jet_mug;
+use nockvm::jets::sort::{jet_dor, jet_gor, jet_mor};
+use either::Either::{Left, Right};
 use nockvm_macros::tas;
+
+const K_136: either::Either<&'static [u8], (u64, u64)> = Right((tas!(b"k"), 136));
+
+static JOCK_HOT_STATE: &[HotEntry] = &[
+    (&[K_136, Left(b"add")], 1, jet_add),
+    (&[K_136, Left(b"dec")], 1, jet_dec),
+    (&[K_136, Left(b"div")], 1, jet_div),
+    (&[K_136, Left(b"dvr")], 1, jet_dvr),
+    (&[K_136, Left(b"gte")], 1, jet_gte),
+    (&[K_136, Left(b"gth")], 1, jet_gth),
+    (&[K_136, Left(b"lte")], 1, jet_lte),
+    (&[K_136, Left(b"lth")], 1, jet_lth),
+    (&[K_136, Left(b"mod")], 1, jet_mod),
+    (&[K_136, Left(b"mul")], 1, jet_mul),
+    (&[K_136, Left(b"sub")], 1, jet_sub),
+    (&[K_136, Left(b"mug")], 1, jet_mug),
+    (&[K_136, Left(b"dor")], 1, jet_dor),
+    (&[K_136, Left(b"gor")], 1, jet_gor),
+    (&[K_136, Left(b"mor")], 1, jet_mor),
+];
 
 use clap::{arg, command, ColorChoice, Parser};
 static KERNEL_JAM: &[u8] = include_bytes!(concat!(env!("CARGO_WORKSPACE_DIR"), "assets/jockc.jam"));
@@ -37,13 +62,20 @@ struct TestCli {
         num_args = 1
     )]
     lib_path: Option<String>,
+
+    #[arg(
+        long = "debug",
+        help = "Emit source location hints for crash traces",
+        default_value_t = false
+    )]
+    debug: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = TestCli::parse();
 
-    let mut nockapp:nockapp::NockApp = boot::setup(KERNEL_JAM, Some(cli.boot.clone()), &[], "jockc", None).await?;
+    let mut nockapp:nockapp::NockApp = boot::setup(KERNEL_JAM, Some(cli.boot.clone()), JOCK_HOT_STATE, "jockc", None).await?;
     boot::init_default_tracing(&cli.boot.clone());
 
     let mut slab:NounSlab = NounSlab::new();
@@ -113,12 +145,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let texts = vec_to_hoon_tuple_list(&mut slab, lib_texts);
 
+        // Hoon loobean: %.y = 0, %.n = 1
+        let dbg = if cli.debug { D(0) } else { D(1) };
+
         slab.modify(|_root|
             { vec![D(tas!(b"jock")),
                 name.as_noun(),
                 text.as_noun(),
                 args,
-                texts] });
+                texts,
+                dbg] });
         slab
     };
 

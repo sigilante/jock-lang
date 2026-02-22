@@ -54,55 +54,55 @@
     ::
       %exec
     ~&  loaded-libs+[~(key by libs.k)]
-    ?.  (gth (lent list-jocks:~(. test-jock libs.k)) n.c)
+    ?.  (gth (lent list-jocks:~(. test-jock [libs.k %.n])) n.c)
       ~&  >>>  "index out of range: {<n.c>}"
       [~ k]
     ~&  >  "running code {<n.c>}"
-    =/  code  (snag n.c list-jocks:~(. test-jock libs.k))
+    =/  code  (snag n.c list-jocks:~(. test-jock [libs.k %.n]))
     ~&       code+[-:code]
-    ~&  >    parse+(parse:~(. test-jock libs.k) +.code)
-    ~&  >>   jeam+(jeam:~(. test-jock libs.k) +.code)
-    =/  res  `*`(mint:~(. test-jock libs.k) +.code)
+    ~&  >    parse+(parse:~(. test-jock [libs.k %.n]) +.code)
+    ~&  >>   jeam+(jeam:~(. test-jock [libs.k %.n]) +.code)
+    =/  res  `*`(mint:~(. test-jock [libs.k %.n]) +.code)
     ~&  >    mint+res
-    ~&  >>   jype+(jype:~(. test-jock libs.k) +.code)
-    ~&  >>>  nock+(nock:~(. test-jock libs.k) +.code)
+    ~&  >>   jype+(jype:~(. test-jock [libs.k %.n]) +.code)
+    ~&  >>>  nock+(nock:~(. test-jock [libs.k %.n]) +.code)
     [~ k]
   ::
       %exec-all
-    ~&  exec-all:~(. test-jock libs.k)
+    ~&  exec-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %test
     ~&  "testing {<n.c>}"
-    ~&  (test:~(. test-jock libs.k) n.c)
+    ~&  (test:~(. test-jock [libs.k %.n]) n.c)
     [~ k]
   ::
       %test-all
-    ~&  test-all:~(. test-jock libs.k)
+    ~&  test-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %parseall
-    ~&  parse-all:~(. test-jock libs.k)
+    ~&  parse-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %jeam-all
-    ~&  jeam-all:~(. test-jock libs.k)
+    ~&  jeam-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %mint-all
-    ~&  mint-all:~(. test-jock libs.k)
+    ~&  mint-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %jype-all
-    ~&  jype-all:~(. test-jock libs.k)
+    ~&  jype-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %nock-all
-    ~&  nock-all:~(. test-jock libs.k)
+    ~&  nock-all:~(. test-jock [libs.k %.n])
     [~ k]
   ::
       %run
-    ~&  run-details:~(. test-jock libs.k)
+    ~&  run-details:~(. test-jock [libs.k %.n])
     [~ k]
   ::
   ==

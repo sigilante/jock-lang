@@ -1,0 +1,17 @@
+// Test set put operation
+let a:Set(@) = {1, 2, 3};
+
+// Add new element
+a[] = 4;
+let b = a;
+
+// Start fresh, add existing (idempotent)
+let a:Set(@) = {1, 2, 3};
+a[] = 1;
+let c = a;
+
+// Put into empty set
+let d:Set(@) = {};
+d[] = 1;
+
+(b c d)

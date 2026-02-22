@@ -1,0 +1,4 @@
+// Minimal map test
+let a = {1 -> 100};
+a[2] = 200;
+a

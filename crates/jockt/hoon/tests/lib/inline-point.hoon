@@ -8,13 +8,13 @@
   'let a: @ = 5;\0alet b: @ = 0;\0aloop;\0aif a == +(b) {\0a  b\0a} else {\0a  b = +(b);\0a  $(b)\0a}\0a\0a'
 ++  test-tokenize
   %+  expect-eq:test
-    !>  ~[[%keyword %func] [%name %a] [%punctuator %'(('] [%name %c] [%punctuator %':'] [%punctuator %'@'] [%punctuator %')'] [%punctuator %'-'] [%punctuator %'>'] [%punctuator %'@'] [%punctuator %'{'] [%punctuator %'+'] [%punctuator %'('] [%name %c] [%punctuator %')'] [%punctuator %'}'] [%punctuator %';'] [%keyword %let] [%name %b] [%punctuator %':'] [%punctuator %'@'] [%punctuator %'='] [%literal [[%number p=42] q=%.n]] [%punctuator %';'] [%name %b] [%punctuator %'='] [%name %a] [%punctuator %'(('] [%literal [[%number p=23] q=%.n]] [%punctuator %')'] [%punctuator %';'] [%name %b]]
-    !>  (rash text parse-tokens:jock)
+    !>  ^-  (list token-body:jock)  ~[[%keyword %func] [%name %a] [%punctuator %'(('] [%name %c] [%punctuator %':'] [%punctuator %'@'] [%punctuator %')'] [%punctuator %'-'] [%punctuator %'>'] [%punctuator %'@'] [%punctuator %'{'] [%punctuator %'+'] [%punctuator %'('] [%name %c] [%punctuator %')'] [%punctuator %'}'] [%punctuator %';'] [%keyword %let] [%name %b] [%punctuator %':'] [%punctuator %'@'] [%punctuator %'='] [%literal [[%number p=42] q=%.n]] [%punctuator %';'] [%name %b] [%punctuator %'='] [%name %a] [%punctuator %'(('] [%literal [[%number p=23] q=%.n]] [%punctuator %')'] [%punctuator %';'] [%name %b]]
+    !>  `(list token-body:jock)`(turn (rash text parse-tokens:jock) |=(=token:jock +.token))
 ::
 ++  test-jeam
   %+  expect-eq:test
     !>  ^-  jock:jock
-        [%func type=[p=[%core p=[%.y p=[inp=[~ [p=[%atom p=%number q=%.n] name='c']] out=[p=[%atom p=%number q=%.n] name='']]] q=~] name='a'] body=[%lambda p=[arg=[inp=[~ [p=[%atom p=%number q=%.n] name='c']] out=[p=[%atom p=%number q=%.n] name='']] body=[%increment val=[%limb p=~[[%name p=%c]]]] context=~]] next=[%let type=[p=[%atom p=%number q=%.n] name='b'] val=[%atom p=[[%number p=42] q=%.n]] next=[%edit limb=~[[%name p=%b]] val=[%call func=[%limb p=~[[%name p=%a]]] arg=[~ [%atom p=[[%number p=23] q=%.n]]]] next=[%limb p=~[[%name p=%b]]]]]]
+        [%func pos=[0 0] type=[p=[%core p=[%.y p=[inp=[~ [p=[%atom p=%number q=%.n] name='c']] out=[p=[%atom p=%number q=%.n] name='']]] q=~] name='a'] body=[%lambda p=[arg=[inp=[~ [p=[%atom p=%number q=%.n] name='c']] out=[p=[%atom p=%number q=%.n] name='']] body=[%increment val=[%limb p=~[[%name p=%c]]]] context=~]] next=[%let pos=[0 0] type=[p=[%atom p=%number q=%.n] name='b'] val=[%atom p=[[%number p=42] q=%.n]] next=[%edit limb=~[[%name p=%b]] val=[%call pos=[0 0] func=[%limb p=~[[%name p=%a]]] arg=[~ [%atom p=[[%number p=23] q=%.n]]]] next=[%limb p=~[[%name p=%b]]]]]]
     !>  (jeam:jock text)
 ::
 ++  test-mint

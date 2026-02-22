@@ -1,0 +1,12 @@
+import hoon;
+
+let n: Atom = 42;
+print(n);
+
+let name = 'hello';
+print(name);
+
+let sum: Atom = n + 8;
+print(sum);
+
+~

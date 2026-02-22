@@ -1855,6 +1855,7 @@ name = "jockc"
 version = "0.1.0-alpha"
 dependencies = [
  "clap",
+ "either",
  "nockapp",
  "nockvm",
  "nockvm_macros",
