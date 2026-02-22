@@ -1,6 +1,5 @@
 !.
 =>  %ab-urbe-condita
-~%  %k.136  ~  ~
 |%
 ::  Types
 ::
@@ -33,7 +32,6 @@
 ::  Bits
 ::
 ++  dec                                                 ::  decrement
-  ~/  %dec
   |=  a=@
   ~_  leaf+"decrement-underflow"
   ?<  =(0 a)
@@ -43,14 +41,12 @@
   $(b +(b))
 ::
 ++  add                                                 ::  plus
-  ~/  %add
   |=  [a=@ b=@]
   ^-  @
   ?:  =(0 a)  b
   $(a (dec a), b +(b))
 ::
 ++  sub                                                 ::  subtract
-  ~/  %sub
   |=  [a=@ b=@]
   ~_  leaf+"subtract-underflow"
   ::  difference
@@ -59,7 +55,6 @@
   $(a (dec a), b (dec b))
 ::
 ++  mul                                                 ::  multiply
-  ~/  %mul
   |:  [a=`@`1 b=`@`1]
   ^-  @
   =+  c=0
@@ -68,7 +63,6 @@
   $(a (dec a), c (add b c))
 ::
 ++  div                                                 ::  divide
-  ~/  %div
   |:  [a=`@`1 b=`@`1]
   ^-  @
   ~_  leaf+"divide-by-zero"
@@ -79,13 +73,11 @@
   $(a (sub a b), c +(c))
 ::
 ++  dvr                                                 ::  divide w/remainder
-  ~/  %dvr
   |:  [a=`@`1 b=`@`1]
   ^-  [p=@ q=@]
   [(div a b) (mod a b)]
 ::
 ++  mod                                                 ::  modulus
-  ~/  %mod
   |:  [a=`@`1 b=`@`1]
   ^-  @
   ?<  =(0 b)
@@ -114,32 +106,27 @@
   $(q (dec q))
 ::
 ++  bex                                                 ::  binary exponent
-  ~/  %bex
   |=  a=bloq
   ^-  @
   ?:  =(0 a)  1
   (mul 2 $(a (dec a)))
 ::
 ++  xeb                                                 ::  binary logarithm
-  ~/  %xeb
   |=  a=@
   ^-  @
   (met 0 a)
 ::
 ++  lsh                                                 ::  left-shift
-  ~/  %lsh
   |=  [a=bite b=@]
   =/  [=bloq =step]  ?^(a a [a *step])
   (mul b (bex (mul (bex bloq) step)))
 ::
 ++  rsh                                                 ::  right-shift
-  ~/  %rsh
   |=  [a=bite b=@]
   =/  [=bloq =step]  ?^(a a [a *step])
   (div b (bex (mul (bex bloq) step)))
 ::
 ++  con                                                 ::  binary or
-  ~/  %con
   |=  [a=@ b=@]
   =+  [c=0 d=0]
   |-  ^-  @
@@ -156,7 +143,6 @@
   ==
 ::
 ++  dis                                                 ::  binary and
-  ~/  %dis
   |=  [a=@ b=@]
   =|  [c=@ d=@]
   |-  ^-  @
@@ -173,7 +159,6 @@
   ==
 ::
 ++  mix                                                 ::  binary xor
-  ~/  %mix
   |=  [a=@ b=@]
   ^-  @
   =+  [c=0 d=0]
@@ -187,7 +172,6 @@
   ==
 ::
 ++  lth                                                 ::  less
-  ~/  %lth
   |=  [a=@ b=@]
   ^-  ?
   ?&  !=(a b)
@@ -198,18 +182,15 @@
   ==  ==  ==
 ::
 ++  lte                                                 ::  less or equal
-  ~/  %lte
   |=  [a=@ b=@]
   |(=(a b) (lth a b))
 ::
 ++  gte                                                 ::  greater or equal
-  ~/  %gte
   |=  [a=@ b=@]
   ^-  ?
   !(lth a b)
 ::
 ++  gth                                                 ::  greater
-  ~/  %gth
   |=  [a=@ b=@]
   ^-  ?
   !(lte a b)
@@ -219,7 +200,6 @@
   (rep a (flop (rip a b)))
 ::
 ++  met                                                 ::  measure
-  ~/  %met
   |=  [a=bloq b=@]
   ^-  @
   =+  c=0
@@ -228,23 +208,19 @@
   $(b (rsh a b), c +(c))
 ::
 ++  end                                                 ::  tail
-  ~/  %end
   |=  [a=bite b=@]
   =/  [=bloq =step]  ?^(a a [a *step])
   (mod b (bex (mul (bex bloq) step)))
 ::
 ++  cat                                                 ::  concatenate
-  ~/  %cat
   |=  [a=bloq b=@ c=@]
   (add (lsh [a (met a b)] c) b)
 ::
 ++  cut                                                 ::  slice
-  ~/  %cut
   |=  [a=bloq [b=step c=step] d=@]
   (end [a c] (rsh [a b] d))
 ::
 ++  can                                                 ::  assemble
-  ~/  %can
   |=  [a=bloq b=(list [p=step q=@])]
   ^-  @
   ?~  b  0
@@ -260,7 +236,6 @@
   (add p.i.b $(b t.b))
 ::
 ++  rep                                                 ::  assemble fixed
-  ~/  %rep
   |=  [a=bite b=(list @)]
   =/  [=bloq =step]  ?^(a a [a *step])
   =|  i=@ud
@@ -270,7 +245,6 @@
   (lsh [bloq (mul step i)] (end [bloq step] i.b))
 ::
 ++  rip                                                 ::  disassemble
-  ~/  %rip
   |=  [a=bite b=@]
   ^-  (list @)
   ?:  =(0 b)  ~
@@ -280,7 +254,6 @@
 ::  Lists
 ::
 ++  lent                                                ::  length
-  ~/  %lent
   |=  a=(list)
   ^-  @
   =+  b=0
@@ -312,7 +285,6 @@
   a
 ::
 ++  flop                                                ::  reverse
-  ~/  %flop
   |*  a=(list)
   =>  .(a (homo a))
   ^+  a
@@ -409,7 +381,6 @@
   --
 ::
 ++  mug                                                 ::  mug with murmur3
-  ~/  %mug
   |=  a=*
   |^  ?@  a  (mum 0xcafe.babe 0x7fff a)
       =/  b  (cat 5 $(a -.a) $(a +.a))
@@ -427,7 +398,6 @@
   --
 ::
 ++  gor                                                 ::  mug order
-  ~/  %gor
   |=  [a=* b=*]
   ^-  ?
   =+  [c=(mug a) d=(mug b)]
@@ -436,7 +406,6 @@
   (lth c d)
 ::
 ++  mor                                                 ::  more mug order
-  ~/  %mor
   |=  [a=* b=*]
   ^-  ?
   =+  [c=(mug (mug a)) d=(mug (mug b))]
@@ -445,7 +414,6 @@
   (lth c d)
 ::
 ++  dor                                                 ::  tree order
-  ~/  %dor
   |=  [a=* b=*]
   ^-  ?
   ?:  =(a b)  &

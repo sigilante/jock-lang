@@ -3677,48 +3677,20 @@
               ?=(%fork -.p.expr-jyp)
           ==
         ~|("cannot del from a union type; use match first" !!)
-      ::  Map del
+      ::  Map del: inline gor-free recursive Nock trap
       ?:  ?&  ?=(@ -<.expr-jyp)
               ?=(%map -.p.expr-jyp)
           ==
-        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
-        ?~  lim  ~|('hoon library not found' !!)
-        ?>  ?=(%| -.u.lim)
-        =/  typ=jype  p.p.u.lim
-        =/  ljw=(list jwing)  r.p.u.lim
-        =+  ast=(j2h ~[[%name %map-del]] ~)
-        ?>  ?=(%hoon -<.typ)
-        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
-        =/  qmin
-          ~|  'failed to validate map-del Nock'
-          ;;(nock q.min)
         =+  [idx-nok idx-jyp]=$(j idx.j)
         :_  expr-jyp
-        ;;  nock
-        :+  %8
-          :^  %9  +<+<.qmin  %0  -.ljw
-        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
-      ::  Set del
+        (make-del-nok idx-nok expr-nock %.y)
+      ::  Set del: inline gor-free recursive Nock trap
       ?:  ?&  ?=(@ -<.expr-jyp)
               ?=(%set -.p.expr-jyp)
           ==
-        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
-        ?~  lim  ~|('hoon library not found' !!)
-        ?>  ?=(%| -.u.lim)
-        =/  typ=jype  p.p.u.lim
-        =/  ljw=(list jwing)  r.p.u.lim
-        =+  ast=(j2h ~[[%name %set-del]] ~)
-        ?>  ?=(%hoon -<.typ)
-        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
-        =/  qmin
-          ~|  'failed to validate set-del Nock'
-          ;;(nock q.min)
         =+  [idx-nok idx-jyp]=$(j idx.j)
         :_  expr-jyp
-        ;;  nock
-        :+  %8
-          :^  %9  +<+<.qmin  %0  -.ljw
-        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
+        (make-del-nok idx-nok expr-nock %.n)
       ~|("index-del requires a Map or Set type" !!)
     ::
         %index-pop
@@ -3740,57 +3712,81 @@
               ?=(%fork -.p.inst-jyp)
           ==
         ~|('cannot put into a union type; use match first' !!)
-      ::  Map put: a[key] = val;
+      ::  Map put: a[key] = val; — inline gor-free prepend
+      ::  Creates [[key val] old_map ~]; map-get checks root first so new value wins
       ?:  ?&  ?=(@ -<.inst-jyp)
               ?=(%map -.p.inst-jyp)
           ==
         ?>  ?=(^ idx.j)
-        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
-        ?~  lim  ~|('hoon library not found' !!)
-        ?>  ?=(%| -.u.lim)
-        =/  typ=jype  p.p.u.lim
-        =/  ljw=(list jwing)  r.p.u.lim
-        =+  ast=(j2h ~[[%name %map-put]] ~)
-        ?>  ?=(%hoon -<.typ)
-        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
-        =/  qmin
-          ~|  'failed to validate map-put Nock'
-          ;;(nock q.min)
         =+  [idx-nok idx-jyp]=$(j u.idx.j)
         =+  [val-nok val-jyp]=$(j val.j)
         =/  put-nok=nock
           ;;  nock
-          :+  %8
-            :^  %9  +<+<.qmin  %0  -.ljw
-          [%9 2 %10 [6 [%7 [%0 3] [idx-nok val-nok [%0 inst-axi]]]] %0 2]
+          [[idx-nok val-nok] [[%0 inst-axi] [%1 0]]]
         =+  [nex nex-jyp]=$(j next.j)
         [[%7 [%10 [inst-axi put-nok] %0 1] nex] nex-jyp]
-      ::  Set put: a[] = val;
+      ::  Set put: a[] = val; — inline gor-free prepend
+      ::  Creates [val old_set ~]; set-get checks root first so new value wins
       ?:  ?&  ?=(@ -<.inst-jyp)
               ?=(%set -.p.inst-jyp)
           ==
         ?>  =(~ idx.j)
-        =/  lim  (~(get-limb jt jyp) ~[[%name %hoon]])
-        ?~  lim  ~|('hoon library not found' !!)
-        ?>  ?=(%| -.u.lim)
-        =/  typ=jype  p.p.u.lim
-        =/  ljw=(list jwing)  r.p.u.lim
-        =+  ast=(j2h ~[[%name %set-put]] ~)
-        ?>  ?=(%hoon -<.typ)
-        =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
-        =/  qmin
-          ~|  'failed to validate set-put Nock'
-          ;;(nock q.min)
         =+  [val-nok val-jyp]=$(j val.j)
         =/  put-nok=nock
           ;;  nock
-          :+  %8
-            :^  %9  +<+<.qmin  %0  -.ljw
-          [%9 2 %10 [6 [%7 [%0 3] [val-nok [%0 inst-axi]]]] %0 2]
+          [val-nok [[%0 inst-axi] [%1 0]]]
         =+  [nex nex-jyp]=$(j next.j)
         [[%7 [%10 [inst-axi put-nok] %0 1] nex] nex-jyp]
       ~|('index-put requires a Map or Set type' !!)
     ==
+  ::
+  ++  make-del-nok
+    ::  Generate inline gor-free del Nock for map (is-map=%.y) or set (is-map=%.n)
+    ::  key-f: Nock formula for the key, evaluated against the current subject
+    ::  tree-f: Nock formula for the tree, evaluated against the current subject
+    ::
+    ::  Uses a self-referencing recursive Nock trap.
+    ::  Trap subject layout: [self key tree acc]
+    ::    ax2=self  ax6=key  ax14=tree  ax15=acc
+    ::    ax28=n.tree  ax56=p.n.tree(map only)  ax58=l.tree  ax59=r.tree
+    ::
+    ::  Algorithm: DFS accumulator — for each node, optionally prepend to acc,
+    ::  then recurse left (updating acc), then recurse right (updating acc again).
+    |=  [key-f=nock tree-f=nock is-map=?]
+    ^-  nock
+    ::  Equality check: map compares key with p.n.tree (ax56), set with n.tree (ax28)
+    =/  eq-f=nock
+      ;;  nock
+      [%5 [%0 6] ?:(is-map [%0 56] [%0 28])]
+    ::  new-acc: if key matches, keep acc; else prepend [n.tree acc ~]
+    =/  new-acc-f=nock
+      ;;  nock
+      :^  %6  eq-f
+        [%0 15]
+        [[%0 28] [[%0 15] [%1 0]]]
+    ::  Inner recursive call: del(key, l.tree, new_acc)
+    ::  Subject: [self key l.tree new_acc]
+    =/  left-call=nock
+      ;;  nock
+      :+  %9  2
+      [[%0 2] [[%0 6] [[%0 58] new-acc-f]]]
+    ::  Outer recursive call: del(key, r.tree, left_result)
+    ::  Subject: [self key r.tree left_result]
+    =/  right-call=nock
+      ;;  nock
+      :+  %9  2
+      [[%0 2] [[%0 6] [[%0 59] left-call]]]
+    ::  Trap body: if tree==~, return acc; else right-call
+    =/  trap-body=nock
+      ;;  nock
+      :^  %6  [%5 [%1 0] [%0 14]]
+        [%0 15]
+        right-call
+    ::  Outer: push trap, call with [self key tree ~] via original subject
+    ;;  nock
+    :+  %8  [%1 trap-body]
+    :+  %9  2
+    [[%0 2] [[%7 [%0 3] key-f] [[%7 [%0 3] tree-f] [%1 0]]]]
   ::
   ++  get-index-number
     |=  j=jock
