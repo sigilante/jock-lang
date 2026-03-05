@@ -1065,6 +1065,14 @@
     ?:  (has-punctuator -.tokens %'}')
       :_  +.tokens
       [%set [%none ~] ~]
+    ::  Empty map: {->}
+    ?:  ?&  !=(~ tokens)
+            (has-punctuator -.tokens %'->')
+            !=(~ +.tokens)
+            (has-punctuator +<.tokens %'}')
+        ==
+      :_  +.+.tokens
+      [%map [%none ~] ~]
     ::  Parse first element
     =^  jock-one  tokens
       (match-inner-jock tokens)
@@ -3526,6 +3534,7 @@
         ~|  ['have:' val-jyp 'need:' type.j]
         !!
       ::  Extract actual value from [%1 val] constant Nock formula
+      =.  val-nock  (fold-const val-nock)
       ?>  ?=([%1 *] val-nock)
       =/  res=(set *)  (~(put in *(set *)) p.val-nock)
       =.  vals  +.vals
@@ -3540,6 +3549,7 @@
         ~|  '%set: value type does not nest in declared type'
         ~|  ['have:' val-jyp 'need:' type.j]
         !!
+      =.  val-nock  (fold-const val-nock)
       ?>  ?=([%1 *] val-nock)
       %=  $
         res   (~(put in res) p.val-nock)
@@ -3558,6 +3568,8 @@
       =+  [val-nock val-jyp]=$(j +.-.pairs)
       ::  Build map at compile-time using Hoon's ~(put by)
       ::  Extract actual values from [%1 val] constant Nock formulas
+      =.  key-nock  (fold-const key-nock)
+      =.  val-nock  (fold-const val-nock)
       ?>  ?=([%1 *] key-nock)
       ?>  ?=([%1 *] val-nock)
       =/  res=(map * *)  (~(put by *(map * *)) p.key-nock p.val-nock)
@@ -3568,6 +3580,8 @@
         [%1 `*`res]
       =+  [key-nock key-jyp]=^$(j -.-.pairs)
       =+  [val-nock val-jyp]=^$(j +.-.pairs)
+      =.  key-nock  (fold-const key-nock)
+      =.  val-nock  (fold-const val-nock)
       ?>  ?=([%1 *] key-nock)
       ?>  ?=([%1 *] val-nock)
       %=  $
@@ -3627,7 +3641,7 @@
               ?=(%fork -.p.expr-jyp)
           ==
         ~|("cannot has-check a union type; use match first" !!)
-      ::  Map has
+      ::  Map has: call map-get inline and check result != ~
       ?:  ?&  ?=(@ -<.expr-jyp)
               ?=(%map -.p.expr-jyp)
           ==
@@ -3636,19 +3650,23 @@
         ?>  ?=(%| -.u.lim)
         =/  typ=jype  p.p.u.lim
         =/  ljw=(list jwing)  r.p.u.lim
-        =+  ast=(j2h ~[[%name %map-has]] ~)
+        =+  ast=(j2h ~[[%name %map-get]] ~)
         ?>  ?=(%hoon -<.typ)
         =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
         =/  qmin
-          ~|  'failed to validate map-has Nock'
+          ~|  'failed to validate map-get Nock (has)'
           ;;(nock q.min)
         =+  [idx-nok idx-jyp]=$(j idx.j)
+        =/  call-nok=nock
+          ;;  nock
+          :+  %8
+            :^  %9  +<+<.qmin  %0  -.ljw
+          [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
         :_  [%atom %logical %.n]^%$
         ;;  nock
-        :+  %8
-          :^  %9  +<+<.qmin  %0  -.ljw
-        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
-      ::  Set has
+        ::  if map-get == ~ then %.n (1) else %.y (0)
+        [%6 [%5 [%1 0] call-nok] [%1 1] [%1 0]]
+      ::  Set has: call set-get inline and check result != ~
       ?:  ?&  ?=(@ -<.expr-jyp)
               ?=(%set -.p.expr-jyp)
           ==
@@ -3657,18 +3675,22 @@
         ?>  ?=(%| -.u.lim)
         =/  typ=jype  p.p.u.lim
         =/  ljw=(list jwing)  r.p.u.lim
-        =+  ast=(j2h ~[[%name %set-has]] ~)
+        =+  ast=(j2h ~[[%name %set-get]] ~)
         ?>  ?=(%hoon -<.typ)
         =/  min  (~(mint ut -.p.p.-.typ) %noun ast)
         =/  qmin
-          ~|  'failed to validate set-has Nock'
+          ~|  'failed to validate set-get Nock (has)'
           ;;(nock q.min)
         =+  [idx-nok idx-jyp]=$(j idx.j)
+        =/  call-nok=nock
+          ;;  nock
+          :+  %8
+            :^  %9  +<+<.qmin  %0  -.ljw
+          [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
         :_  [%atom %logical %.n]^%$
         ;;  nock
-        :+  %8
-          :^  %9  +<+<.qmin  %0  -.ljw
-        [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
+        ::  if set-get == ~ then %.n (1) else %.y (0)
+        [%6 [%5 [%1 0] call-nok] [%1 1] [%1 0]]
       ~|("index-has requires a Map or Set type" !!)
     ::
         %index-del
@@ -3787,6 +3809,21 @@
     :+  %8  [%1 trap-body]
     :+  %9  2
     [[%0 2] [[%7 [%0 3] key-f] [[%7 [%0 3] tree-f] [%1 0]]]]
+  ::
+  ++  fold-const
+    ::  Recursively fold a cell-of-constants [[%1 a] [%1 b]] into [%1 [a b]].
+    ::  In nock type, $^ = [p=nock q=nock] when head is itself a cell (not a tag atom).
+    ::  Enables compile-time set/map literals with pair/tuple element types.
+    |=  n=nock
+    ^-  nock
+    ?:  ?=([%1 *] n)  n
+    ::  Only recurse into $^ cells (head is a cell, not a tag atom like %8)
+    ?.  ?=(^ -.n)  n
+    =/  l=nock  $(n -.n)
+    =/  r=nock  $(n +.n)
+    ?.  ?=([%1 *] l)  n
+    ?.  ?=([%1 *] r)  n
+    [%1 p.l p.r]
   ::
   ++  get-index-number
     |=  j=jock

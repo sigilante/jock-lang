@@ -1,0 +1,8 @@
+// Test map del with char keys
+let a = {'a' -> 100, 'b' -> 200, 'c' -> 300};
+
+let b = a[!'a'];
+let c = b[!'b'];
+let d = a[!'z'];
+
+(a b c d)
