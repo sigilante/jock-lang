@@ -34,6 +34,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Cache jockc.jam
+        uses: actions/cache@v4
+        with:
+          path: |
+            assets/jockc.jam
+            ~/.nockapp/hoonc
+          key: ${{ runner.os }}-jockc-jam-${{ hashFiles('crates/jockc/hoon/**', 'common/hoon/lib/**') }}
+          restore-keys: |
+            ${{ runner.os }}-jockc-jam-
+
       - name: Install hoonc via Nockup
         run: |
           curl -fsSL https://raw.githubusercontent.com/nockchain/nockchain/refs/heads/master/crates/nockup/install.sh | bash
@@ -46,8 +56,8 @@ jobs:
       - name: Build jockc
         run: cargo build --profile release --bin jockc
 
-      - name: Test struct-basic
-        run: timeout 120 ./target/release/jockc --import-dir common/hoon/lib ./crates/jockt/hoon/lib/tests/struct-basic || [ $? -eq 124 ]
-
-      - name: Test struct-field-access
-        run: timeout 120 ./target/release/jockc --import-dir common/hoon/lib ./crates/jockt/hoon/lib/tests/struct-field-access || [ $? -eq 124 ]
+      - name: Run Jock tests
+        run: bash common/tests/run-all-tests.sh
+        env:
+          PARALLEL: 8
+          TEST_TIMEOUT: 60
