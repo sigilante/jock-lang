@@ -1,0 +1,17 @@
+// Test map put operation
+let a = {1 -> 100, 2 -> 200};
+
+// Add new key
+a[3] = 300;
+let b = a;
+
+// Update existing key (start fresh)
+let a = {1 -> 100, 2 -> 200};
+a[1] = 999;
+let c = a;
+
+// Put into empty map
+let d = {->};
+d[1] = 100;
+
+(b c d)

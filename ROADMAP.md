@@ -32,11 +32,11 @@ This involves converting the single `$map` in the compiler door sample to a `mip
 
 - Current status:  libraries can be supplied to the sample of the compiler door as a `(map term cord)`.  (This should be changed to `(map path cord)` for flexibility, versioning, etc.)  `jockc` supports preprocessed argument insertion, but this should be replaced with this better system.
 
-## Jock imports
+## Jock imports ✅ IMPLEMENTED
 
 Support Jock library imports just like Hoon imports.
 
-This probably requires changing the library map to use paths as the keys instead of terms.
+- Current status:  `import mylib;` where `mylib.jock` is in the import directory works via AST inlining.  The library's parse tree (compose/func/let chains) is spliced into the importing file at parse time.  No new module system needed — the Rust loader already reads `.jock` files into the `libs` map.  Library files should contain definitions only (e.g. `func double(x: Atom) -> Atom { (x + x) }; ~`).
 
 ## Hoon return types
 
@@ -56,16 +56,16 @@ let mylist = [1 2 3 4 5];
 
 - Current status:  Index notation (`expr[idx]`) is implemented for both lists (runtime via `hoon.snag`) and tuples (compile-time axis resolution).  Slicing (`[1:4]`) is not yet implemented.
 
-## `Map` type and syntax
+## `Map` and `Set` type and syntax ✅ IMPLEMENTED
 
-Implement a native `Map` type with syntax support.
+Implement native `Map` and `Set` types with syntax support.
+
+- Current status: Map and Set are fully implemented with bracket notation only.  Literal syntax: `{'a' -> 1, 'b' -> 2}` (Map), `{1, 2, 3}` (Set), `{->}` / `{}` (empty).  Operations: `m[k]` (get → option), `m[k?]` (has → bool), `m[k] = v;` (put), `m[!k]` (del).  Key types supported include atoms, chars, and number pairs.  92 regression tests in `common/tests/` cover all operations.
 
 ```
-{
-    'a' -> 'A'
-    'b' -> 'B'
-    'c' -> 'C'
-}
+let m = {'a' -> 100, 'b' -> 200};
+m['c'] = 300;
+(m['a'] m['b'?] m[!'a'])
 ```
 
 ## Operator associativity
@@ -78,11 +78,9 @@ Implement a `List(String)` type with syntax support.
 
 This will facilitate paths and wires for JockApp interactions.
 
-## `print` keyword
+## `print` keyword ✅ IMPLEMENTED
 
 Produce output as a side effect.
-
-We can print literals fine, but references (variables) are not yet complete.
 
 ```
 let a = 5;
@@ -90,7 +88,8 @@ print(a);
 a
 ```
 
-- Current status:  PR #53 contains work towards wrapping the environment in a closure so that references can be resolved at runtime.
+- Current status:  Runtime prettyprinting works for all basic types.  `print(x)` generates Nock hint formulas that evaluate at runtime — the type (jype) selects the formatter at compile time, and the value is computed at runtime.  Supported types: `%number` (decimal via `hoon.scot-ud`), `%hex` (hex via `hoon.scot-ux`), `%chars` (passthrough), `%logical` (inline `%.y`/`%.n`), and `%fork` option types (runtime none/some check).
+- Known issue:  Number formatting is slow (~10s per value) because the hoon library's arithmetic functions (`div`, `mod`, `add`, etc.) are not jetted.  The library is compiled with `(mint ut %noun)` which produces correct Nock but battery hashes don't match the kernel's jet registrations.  Fixing this requires either (a) compiling hoon.hoon in a way that produces matching battery hashes, (b) registering jets for the standalone core's batteries in the Nock runtime, or (c) caching the compiled noun (see "Cache noun builds" above) so the cost is amortized.
 
 ## `protocol` traits interface ✅ IMPLEMENTED
 

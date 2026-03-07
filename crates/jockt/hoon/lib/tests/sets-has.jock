@@ -1,0 +1,11 @@
+// Test set has operation
+let a:Set(@) = {1, 2, 3};
+
+// Has existing element
+let b = a[1?];
+let c = a[2?];
+
+// Has missing element
+let d = a[999?];
+
+(b c d)

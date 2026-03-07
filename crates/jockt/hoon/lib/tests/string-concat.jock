@@ -1,0 +1,4 @@
+// String concatenation via +
+import hoon;
+let s = "hello" + " " + "world";
+s

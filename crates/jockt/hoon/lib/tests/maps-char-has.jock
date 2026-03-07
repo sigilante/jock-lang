@@ -1,0 +1,8 @@
+// Test map has with char keys
+let a = {'a' -> 100, 'b' -> 200, 'c' -> 300};
+
+let b = a['a'?];
+let c = a['b'?];
+let d = a['z'?];
+
+(b c d)

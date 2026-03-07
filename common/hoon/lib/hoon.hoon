@@ -614,6 +614,33 @@
     ==
   --
 ::
+::  Map/Set helpers for Jock bracket syntax
+::
+++  map-get
+  |*  [b=* a=(tree (pair))]
+  |-
+  ^-  *
+  ?~  a  ~
+  ?:  =(b p.n.a)  `q.n.a
+  =/  lft  $(a l.a)
+  ?^  lft  lft
+  $(a r.a)
+++  map-put   |*([b=* c=* a=(tree (pair))] (~(put by a) b c))
+++  map-del   |*([b=* a=(tree (pair))] (~(del by a) b))
+++  map-has   |*([b=* a=(tree (pair))] !=(~ (map-get b a)))
+++  set-get
+  |*  [b=* a=(tree)]
+  |-
+  ^-  *
+  ?~  a  ~
+  ?:  =(b n.a)  `n.a
+  =/  lft  $(a l.a)
+  ?^  lft  lft
+  $(a r.a)
+++  set-put   |*([b=* a=(tree)] (~(put in a) b))
+++  set-del   |*([b=* a=(tree)] (~(del in a) b))
+++  set-has   |*([b=* a=(tree)] !=(~ (set-get b a)))
+::
 ::  Jugs
 ::
 ++  ju
@@ -639,4 +666,34 @@
     =+  d=(get b)
     (~(put by a) b (~(put in d) c))
   --
+::
+++  scot-ud                                              ::  @ud to @t
+  |=  a=@
+  ^-  @
+  ?:  =(0 a)  '0'
+  =/  digits=(list @)  ~
+  =/  b  a
+  |-
+  ?:  =(0 b)
+    =/  out=@  0
+    |-
+    ?~  digits  out
+    $(out (cat 3 out i.digits), digits t.digits)
+  $(b (div b 10), digits [(add 48 (mod b 10)) digits])
+::
+++  scot-ux                                              ::  @ux to @t
+  |=  a=@
+  ^-  @
+  ?:  =(0 a)  '0x0'
+  =/  digits=(list @)  ~
+  =/  b  a
+  |-
+  ?:  =(0 b)
+    =/  out=@  (cat 3 '0' 'x')
+    |-
+    ?~  digits  out
+    $(out (cat 3 out i.digits), digits t.digits)
+  =/  d  (mod b 16)
+  =/  c  ?:((lth d 10) (add 48 d) (add 87 d))
+  $(b (div b 16), digits [c digits])
 --

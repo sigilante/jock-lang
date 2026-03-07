@@ -1,14 +1,13 @@
-compose
-  class Point(x:@ y:@) {
-    inc(q:@) -> @ {
-      +(q)
-    }
+// Test class state access
+struct PointState { x: Real, y: Real };
+class Point(PointState) {
+  inc(self: PointState, q: Real) -> Real {
+    +(q)
   }
-;
-
-let point_1 = Point(70 80);
-let point_2 = Point(90 100);
-((point_2.x() point_2.y()) (point_1.x() point_1.y()))
+};
+let point1 = Point { x: 70, y: 80 };
+let point2 = Point { x: 90, y: 100 };
+((point2.x point2.y) (point1.x point1.y))
 
 /*
 !=

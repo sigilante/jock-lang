@@ -1,0 +1,11 @@
+// Test map has operation
+let a = {1 -> 100, 2 -> 200, 3 -> 300};
+
+// Has existing key
+let b = a[1?];
+let c = a[2?];
+
+// Has missing key
+let d = a[999?];
+
+(b c d)

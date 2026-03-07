@@ -8,13 +8,13 @@
   'let a = eval (42 55) (0 2);\0a\0aa\0a'
 ++  test-tokenize
   %+  expect-eq:test
-    !>  ~[[%keyword %let] [%name %a] [%punctuator %'='] [%keyword %eval] [%punctuator %'('] [%literal [[%number p=42] q=%.n]] [%literal [[%number p=55] q=%.n]] [%punctuator %')'] [%punctuator %'('] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=2] q=%.n]] [%punctuator %')'] [%punctuator %';'] [%name %a]]
-    !>  (rash text parse-tokens:jock)
+    !>  ^-  (list token-body:jock)  ~[[%keyword %let] [%name %a] [%punctuator %'='] [%keyword %eval] [%punctuator %'('] [%literal [[%number p=42] q=%.n]] [%literal [[%number p=55] q=%.n]] [%punctuator %')'] [%punctuator %'('] [%literal [[%number p=0] q=%.n]] [%literal [[%number p=2] q=%.n]] [%punctuator %')'] [%punctuator %';'] [%name %a]]
+    !>  `(list token-body:jock)`(turn (rash text parse-tokens:jock) |=(=token:jock +.token))
 ::
 ++  test-jeam
   %+  expect-eq:test
     !>  ^-  jock:jock
-        [%let type=[p=[%none p=~] name='a'] val=[%eval p=[p=[%atom p=[[%number p=42] q=%.n]] q=[%atom p=[[%number p=55] q=%.n]]] q=[p=[%atom p=[[%number p=0] q=%.n]] q=[%atom p=[[%number p=2] q=%.n]]]] next=[%limb p=~[[%name p=%a]]]]
+        [%let pos=[0 0] type=[p=[%none p=~] name='a'] val=[%eval p=[p=[%atom p=[[%number p=42] q=%.n]] q=[%atom p=[[%number p=55] q=%.n]]] q=[p=[%atom p=[[%number p=0] q=%.n]] q=[%atom p=[[%number p=2] q=%.n]]]] next=[%limb p=~[[%name p=%a]]]]
     !>  (jeam:jock text)
 ::
 ++  test-mint
