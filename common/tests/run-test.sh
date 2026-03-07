@@ -44,7 +44,7 @@ JOCK_PID=$!
 max_checks=$((TIMEOUT * 2))
 checks=0
 while [ $checks -lt $max_checks ]; do
-  if grep -q '%nock' "$tmpfile" 2>/dev/null; then
+  if grep -aq '%nock' "$tmpfile" 2>/dev/null; then
     sleep 1  # let the full %nock line flush before killing
     break
   fi
@@ -56,8 +56,8 @@ done
 kill "$JOCK_PID" 2>/dev/null || true
 wait "$JOCK_PID" 2>/dev/null || true
 
-# Read and clean output.
-output=$(sed 's/\x1b\[[0-9;]*m//g' "$tmpfile")
+# Read and clean output (strip null bytes first — jockc emits binary log data on Linux).
+output=$(tr -d '\0' < "$tmpfile" | sed 's/\x1b\[[0-9;]*m//g')
 
 # Extract %nock result line.
 nock_line=$(printf '%s' "$output" | grep '%nock' | head -1 || true)

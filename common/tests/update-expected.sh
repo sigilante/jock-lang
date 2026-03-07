@@ -37,7 +37,7 @@ run_one() {
   local max_checks=$((TIMEOUT * 2))
   local checks=0
   while [ $checks -lt $max_checks ]; do
-    if grep -q '%nock' "$tmpfile" 2>/dev/null; then
+    if grep -aq '%nock' "$tmpfile" 2>/dev/null; then
       sleep 1  # let the full %nock line flush before killing
       break
     fi
@@ -49,7 +49,7 @@ run_one() {
   wait "$JOCK_PID" 2>/dev/null || true
 
   local output
-  output=$(sed 's/\x1b\[[0-9;]*m//g' "$tmpfile")
+  output=$(tr -d '\0' < "$tmpfile" | sed 's/\x1b\[[0-9;]*m//g')
   rm -f "$tmpfile"
 
   local nock_line
