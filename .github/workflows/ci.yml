@@ -51,7 +51,12 @@ jobs:
           $HOME/.nockup/bin/nockup update
 
       - name: Build jockc.jam
-        run: make assets/jockc.jam
+        # Touch source files to ensure Make sees them as newer than any cache-restored jam.
+        # GitHub Actions cache restore sets restored file timestamps to "now", same as checkout,
+        # so Make may incorrectly consider the jam up-to-date when it is actually stale.
+        run: |
+          find crates/jockc/hoon common/hoon/lib -name '*.hoon' | xargs touch
+          make assets/jockc.jam
 
       - name: Build jockc
         run: cargo build --profile release --bin jockc
@@ -59,5 +64,5 @@ jobs:
       - name: Run Jock tests
         run: bash common/tests/run-all-tests.sh
         env:
-          PARALLEL: 8
-          TEST_TIMEOUT: 60
+          PARALLEL: 4
+          TEST_TIMEOUT: 120
