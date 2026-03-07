@@ -1,0 +1,4 @@
+// Chars concatenation via +
+import hoon;
+let c = 'foo' + 'bar';
+c

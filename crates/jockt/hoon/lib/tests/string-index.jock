@@ -1,0 +1,4 @@
+// String byte indexing: s[i] returns a one-byte String
+import hoon;
+let s = "hello";
+s[0]

@@ -56,16 +56,16 @@ let mylist = [1 2 3 4 5];
 
 - Current status:  Index notation (`expr[idx]`) is implemented for both lists (runtime via `hoon.snag`) and tuples (compile-time axis resolution).  Slicing (`[1:4]`) is not yet implemented.
 
-## `Map` type and syntax
+## `Map` and `Set` type and syntax ✅ IMPLEMENTED
 
-Implement a native `Map` type with syntax support.
+Implement native `Map` and `Set` types with syntax support.
+
+- Current status: Map and Set are fully implemented with bracket notation only.  Literal syntax: `{'a' -> 1, 'b' -> 2}` (Map), `{1, 2, 3}` (Set), `{->}` / `{}` (empty).  Operations: `m[k]` (get → option), `m[k?]` (has → bool), `m[k] = v;` (put), `m[!k]` (del).  Key types supported include atoms, chars, and number pairs.  92 regression tests in `common/tests/` cover all operations.
 
 ```
-{
-    'a' -> 'A'
-    'b' -> 'B'
-    'c' -> 'C'
-}
+let m = {'a' -> 100, 'b' -> 200};
+m['c'] = 300;
+(m['a'] m['b'?] m[!'a'])
 ```
 
 ## Operator associativity

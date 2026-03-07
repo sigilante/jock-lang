@@ -119,7 +119,7 @@
 ::
 +$  jnoun
   $+  jnoun
-  $%  [%string p=tape]
+  $%  [%string p=cord]
       [%path p=path]
   ==
 ::
@@ -314,10 +314,10 @@
         string
         jpath
     ==
-  ::  Double-quoted tape: "foo" -> (list @tD)
+  ::  Double-quoted cord: "foo" -> @t
   ++  string
     %+  stag  %string
-    (ifix [doq doq] (star ;~(less doq prn)))
+    (cook crip (ifix [doq doq] (star ;~(less doq prn))))
   ::  Path:  /foo/bar/baz -> path
   ++  jpath
     %+  stag  %path
@@ -466,6 +466,8 @@
       [%index-del expr=jock idx=jock]                            :: expr[!idx] — map/set del
       [%index-pop expr=jock]                                     :: expr[!]    — stack pop
       [%index-put expr=jock idx=(unit jock) val=jock next=jock]  :: expr[idx]=val / expr[]=val
+      [%index-slice expr=jock start=jock end=jock]               :: expr[i:j]  — byte slice
+      [%index-uslice expr=jock start=jock end=jock]              :: expr[i::j] — unicode slice (stub)
       [%cast mode=?(%as %as-q %as-x) expr=jock target=jype]
       [%coalesce expr=jock fallback=jock]
       [%bind name=term]
@@ -738,13 +740,24 @@
     =.  tokens  +.tokens  :: skip '?'
     ?>  (got-punctuator -.tokens %']')
     $(lock ;;(jock [%index-has lock idx]), tokens +.tokens)
-  ::  check for range syntax: expr[start..end]
+  ::  check for slice syntax: expr[start:end] or expr[start::end]
   ?:  ?&  !=(~ tokens)
-          (has-punctuator -.tokens %'.')
-          !=(~ +.tokens)
-          (has-punctuator +<.tokens %'.')
+          (has-punctuator -.tokens %':')
       ==
-    ~|("range indexing not yet supported" !!)
+    ::  unicode slice: expr[start::end] (two colons)
+    ?:  ?&  !=(~ +.tokens)
+            (has-punctuator +<.tokens %':')
+        ==
+      =.  tokens  +.+.tokens  :: skip '::'
+      =^  end  tokens
+        (match-inner-jock tokens)
+      ?>  (got-punctuator -.tokens %']')
+      $(lock ;;(jock [%index-uslice lock idx end]), tokens +.tokens)
+    =.  tokens  +.tokens  :: skip ':'
+    =^  end  tokens
+      (match-inner-jock tokens)
+    ?>  (got-punctuator -.tokens %']')
+    $(lock ;;(jock [%index-slice lock idx end]), tokens +.tokens)
   ?>  (got-punctuator -.tokens %']')
   =.  tokens  +.tokens  :: skip ']'
   ::  expr[idx] = val; → map put
@@ -909,13 +922,24 @@
     =.  tokens  +.tokens  :: skip '?'
     ?>  (got-punctuator -.tokens %']')
     $(lock ;;(jock [%index-has lock idx]), tokens +.tokens)
-  ::  check for range syntax: expr[start..end]
+  ::  check for slice syntax: expr[start:end] or expr[start::end]
   ?:  ?&  !=(~ tokens)
-          (has-punctuator -.tokens %'.')
-          !=(~ +.tokens)
-          (has-punctuator +<.tokens %'.')
+          (has-punctuator -.tokens %':')
       ==
-    ~|("range indexing not yet supported" !!)
+    ::  unicode slice: expr[start::end] (two colons)
+    ?:  ?&  !=(~ +.tokens)
+            (has-punctuator +<.tokens %':')
+        ==
+      =.  tokens  +.+.tokens  :: skip '::'
+      =^  end  tokens
+        (match-inner-jock tokens)
+      ?>  (got-punctuator -.tokens %']')
+      $(lock ;;(jock [%index-uslice lock idx end]), tokens +.tokens)
+    =.  tokens  +.tokens  :: skip ':'
+    =^  end  tokens
+      (match-inner-jock tokens)
+    ?>  (got-punctuator -.tokens %']')
+    $(lock ;;(jock [%index-slice lock idx end]), tokens +.tokens)
   ?>  (got-punctuator -.tokens %']')
   =.  tokens  +.tokens  :: skip ']'
   ::  expr[idx] = val; → map put
@@ -2495,6 +2519,15 @@
         :+  %8
           :^  %9  +<+<.qmin  %0  -.ljw
         [%9 2 %10 [6 [%7 [%0 3] [idx-nok expr-nock]]] %0 2]
+      ::  String/Chars: byte at index via cut 3 [i 1] s
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?|  ?&(?=(%noun -.p.expr-jyp) ?=(%string p.p.expr-jyp))
+                  ?&(?=(%atom -.p.expr-jyp) ?=(%chars p.p.expr-jyp))
+              ==
+          ==
+        =+  [idx-nok idx-jyp]=$(j idx.j)
+        :_  expr-jyp
+        (make-hoon-binop %cut [%1 3] [[idx-nok [%1 1]] expr-nock])
       ::  Tuple (cell jype): compute axis at compile time.
       ::  Index must be a literal number.
       =/  n=@  (get-index-number idx.j)
@@ -3020,6 +3053,21 @@
         %call
       =/  [call-nok=nock call-jyp=jype]
       ^-  [nock jype]
+      ::  Special case: lent(String) or lent(Chars) → byte-length via met 3
+      ?:  ?&  ?=(%limb -.func.j)
+              =(p.func.j ~[[%name %lent]])
+              ?=(^ arg.j)
+          ==
+        =+  [arg-nock arg-jyp]=$(j u.arg.j)
+        ?:  ?&  ?=(@ -<.arg-jyp)
+                ?|  ?&(?=(%noun -.p.arg-jyp) ?=(%string p.p.arg-jyp))
+                    ?&(?=(%atom -.p.arg-jyp) ?=(%chars p.p.arg-jyp))
+                ==
+            ==
+          :_  [%atom %number %.n]^%$
+          (make-hoon-binop %met [%1 3] arg-nock)
+        :_  [%atom %number %.n]^%$
+        (make-hoon-call %lent arg-nock)
       ?+    -.func.j  ~|('must call a limb' !!)
           %limb
         =/  old-jyp  jyp
@@ -3364,6 +3412,20 @@
       ::  If unary and no overload found, crash
       ?~  b.j
         ~|('unary operator requires trait overload' !!)
+      ::  String/Chars + concat: dispatch before arithmetic fallthrough
+      ?:  =(op.j %'+')
+        =+  [a a-jyp]=$(j a.j)
+        =+  [b b-jyp]=$(j u.b.j)
+        ?:  ?&  ?=(@ -<.a-jyp)
+                ?|  ?&(?=(%noun -.p.a-jyp) ?=(%string p.p.a-jyp))
+                    ?&(?=(%atom -.p.a-jyp) ?=(%chars p.p.a-jyp))
+                ==
+            ==
+          :_  a-jyp
+          (make-hoon-binop %cat [%1 3] [a b])
+        ::  Not string/chars — numeric add
+        :_  [%atom %number %.n]^%$
+        (make-hoon-binop %add a b)
       ::  Standard operator: returns atom type
       :_  [%atom %number %.n]^%$
       ?-    op.j
@@ -3715,6 +3777,24 @@
         (make-del-nok idx-nok expr-nock %.n)
       ~|("index-del requires a Map or Set type" !!)
     ::
+        %index-slice
+      =+  [expr-nock expr-jyp]=$(j expr.j)
+      ?:  ?&  ?=(@ -<.expr-jyp)
+              ?|  ?&(?=(%noun -.p.expr-jyp) ?=(%string p.p.expr-jyp))
+                  ?&(?=(%atom -.p.expr-jyp) ?=(%chars p.p.expr-jyp))
+              ==
+          ==
+        =+  [start-nok start-jyp]=$(j start.j)
+        =+  [end-nok end-jyp]=$(j end.j)
+        =/  len-nok=nock  (make-hoon-binop %sub end-nok start-nok)
+        :_  expr-jyp
+        (make-hoon-binop %cut [%1 3] [[start-nok len-nok] expr-nock])
+      ~|("index-slice requires a String or Chars type" !!)
+    ::
+        %index-uslice
+      ~|  'unicode slicing not yet implemented'
+      !!
+    ::
         %index-pop
       ~|  '%index-pop: not yet implemented'
       !!
@@ -3991,14 +4071,12 @@
         ::  What we call nouns are specific types.
         ::  [%noun p=jnoun]
         ?-    -.p.arg
-          ::  a string is simply a tape, (list @tD)
+          ::  a string is a cord (@t atom)
             %string
           ~|  %string
           ;;  (list hoon)
           :_  ~
-          :-  %knit
-          ^-  *
-          p.p.arg
+          [%rock %t p.p.arg]
           ::  a path is a (list @t)
             %path
           ~|  %path
@@ -4233,6 +4311,9 @@
         :-  [%1 '%.y']
         [%1 '%.n']
       ==
+        %noun
+      ::  String is already a cord (@t); display directly
+      val
         %fork
       ::  Option type (?T): check none/some at runtime
       ?:  &(?=(@ -<.p.p.typ) =(%none -.p.p.p.typ))
