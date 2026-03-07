@@ -33,12 +33,14 @@ run_one() {
   "$JOCKC" "$test_path" --import-dir "$IMPORT_DIR" >"$tmpfile" 2>&1 &
   local JOCK_PID=$!
 
-  # Poll every 0.5s until %nock appears or timeout.
+  # Poll every 0.5s until [%nock appears (actual result) or timeout.
+  # We look for \[%nock (with bracket) to avoid matching the bare ~| %nock hint
+  # which fires early on CI (Linux) before computation completes.
   local max_checks=$((TIMEOUT * 2))
   local checks=0
   while [ $checks -lt $max_checks ]; do
-    if grep -q '%nock' "$tmpfile" 2>/dev/null; then
-      sleep 1  # let the full %nock line flush before killing
+    if tr -d '\0' < "$tmpfile" | grep -q '\[%nock' 2>/dev/null; then
+      sleep 0.5  # let the full %nock line flush before killing
       break
     fi
     sleep 0.5
@@ -52,14 +54,18 @@ run_one() {
   output=$(tr -d '\0' < "$tmpfile" | sed 's/\x1b\[[0-9;]*m//g')
   rm -f "$tmpfile"
 
-  local nock_line
-  nock_line=$(printf '%s' "$output" | grep '%nock' | head -1 || true)
-
-  if [ -z "$nock_line" ]; then
+  # Check if %nock stage was reached at all (hint or result).
+  local nock_hint
+  nock_hint=$(printf '%s' "$output" | grep '%nock' | head -1 || true)
+  if [ -z "$nock_hint" ]; then
     echo "SKIP [$test_name]: did not reach %nock"
     skip=$((skip + 1))
     return
   fi
+
+  # Extract the actual [%nock result] line (may be absent if program crashed inside runner).
+  local nock_line
+  nock_line=$(printf '%s' "$output" | grep '\[%nock' | head -1 || true)
 
   local nock_value
   nock_value=$(printf '%s' "$nock_line" \

@@ -40,12 +40,14 @@ trap 'rm -f "$tmpfile"' EXIT
 "$JOCKC" "$test_path" --import-dir "$IMPORT_DIR" >"$tmpfile" 2>&1 &
 JOCK_PID=$!
 
-# Poll every 0.5s until %nock appears or timeout.
+# Poll every 0.5s until [%nock appears (actual result) or timeout.
+# We look for \[%nock (with bracket) to avoid matching the bare ~| %nock hint
+# which fires early on CI (Linux) before computation completes.
 max_checks=$((TIMEOUT * 2))
 checks=0
 while [ $checks -lt $max_checks ]; do
-  if grep -q '%nock' "$tmpfile" 2>/dev/null; then
-    sleep 1  # let the full %nock line flush before killing
+  if tr -d '\0' < "$tmpfile" | grep -q '\[%nock' 2>/dev/null; then
+    sleep 0.5  # let the full %nock line flush before killing
     break
   fi
   sleep 0.5
@@ -59,14 +61,17 @@ wait "$JOCK_PID" 2>/dev/null || true
 # Read and clean output (strip null bytes first — jockc emits binary log data on Linux).
 output=$(tr -d '\0' < "$tmpfile" | sed 's/\x1b\[[0-9;]*m//g')
 
-# Extract %nock result line.
-nock_line=$(printf '%s' "$output" | grep '%nock' | head -1 || true)
-
-if [ -z "$nock_line" ]; then
+# Check if %nock stage was reached at all (hint or result).
+# The bare ~| %nock hint fires at the start of nock:runner regardless of success.
+nock_hint=$(printf '%s' "$output" | grep '%nock' | head -1 || true)
+if [ -z "$nock_hint" ]; then
   echo "FAIL [$test_name]: did not reach %nock"
   printf '%s\n' "$output" | tail -5 | sed 's/^/  /'
   exit 1
 fi
+
+# Extract the actual [%nock result] line (may be absent if program crashed inside runner).
+nock_line=$(printf '%s' "$output" | grep '\[%nock' | head -1 || true)
 
 # Normalize: strip tag, collapse whitespace, trim.
 nock_value=$(printf '%s' "$nock_line" \
