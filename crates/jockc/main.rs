@@ -6,7 +6,6 @@ use nockvm::jets::hot::HotEntry;
 use nockvm::jets::math::{jet_add, jet_dec, jet_div, jet_dvr, jet_gte, jet_gth, jet_lte, jet_lth, jet_mod, jet_mul, jet_sub};
 use nockvm::jets::hash::jet_mug;
 use nockvm::jets::sort::{jet_dor, jet_gor, jet_mor};
-use nockvm::jets::bits::{jet_met, jet_cat, jet_cut};
 use either::Either::{Left, Right};
 use nockvm_macros::tas;
 
@@ -28,9 +27,6 @@ static JOCK_HOT_STATE: &[HotEntry] = &[
     (&[K_136, Left(b"dor")], 1, jet_dor),
     (&[K_136, Left(b"gor")], 1, jet_gor),
     (&[K_136, Left(b"mor")], 1, jet_mor),
-    (&[K_136, Left(b"met")], 1, jet_met),
-    (&[K_136, Left(b"cat")], 1, jet_cat),
-    (&[K_136, Left(b"cut")], 1, jet_cut),
 ];
 
 use clap::{arg, command, ColorChoice, Parser};

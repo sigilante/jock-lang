@@ -44,7 +44,7 @@ JOCK_PID=$!
 max_checks=$((TIMEOUT * 2))
 checks=0
 while [ $checks -lt $max_checks ]; do
-  if grep -aq '%nock' "$tmpfile" 2>/dev/null; then
+  if grep -q '%nock' "$tmpfile" 2>/dev/null; then
     sleep 1  # let the full %nock line flush before killing
     break
   fi

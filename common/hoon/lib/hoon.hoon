@@ -1,6 +1,5 @@
 !.
 =>  %ab-urbe-condita
-~%  %k.136  ~  ~
 |%
 ::  Types
 ::
@@ -201,7 +200,6 @@
   (rep a (flop (rip a b)))
 ::
 ++  met                                                 ::  measure
-  ~/  %met
   |=  [a=bloq b=@]
   ^-  @
   =+  c=0
@@ -215,12 +213,10 @@
   (mod b (bex (mul (bex bloq) step)))
 ::
 ++  cat                                                 ::  concatenate
-  ~/  %cat
   |=  [a=bloq b=@ c=@]
   (add (lsh [a (met a b)] c) b)
 ::
 ++  cut                                                 ::  slice
-  ~/  %cut
   |=  [a=bloq [b=step c=step] d=@]
   (end [a c] (rsh [a b] d))
 ::
@@ -700,5 +696,4 @@
   =/  d  (mod b 16)
   =/  c  ?:((lth d 10) (add 48 d) (add 87 d))
   $(b (div b 16), digits [c digits])
-::
 --
