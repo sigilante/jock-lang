@@ -118,11 +118,11 @@ Produce a feature-complete, fast Jock REPL/CLI.
 
 [Jojo](https://github.com/sigilante/jojo) is a proof of concept, and does not represent any serious thought towards the "best" solution.
 
-## Strings
+## Strings ✅ IMPLEMENTED (pending jet performance)
 
 Implement true strings with operators.
 
-Strings should be `cord` UTF-8 encodings, as `tape`s are several times larger in memory representation.  Strings may or may not be agnostic to quote type (defer this decision).
+Strings are `cord` (`@t`) UTF-8 encodings.  `"foo"` = `String`; `'foo'` = `Chars` (symbol/key use).  Both are the same underlying atom; different Jock types.
 
 ```
 let forename:String = "Buckminster";
@@ -130,4 +130,61 @@ let surname:String = "Fuller";
 forename + " " + surname
 ```
 
-- Current status:  Right now we can write strings but operations on them must be routed through the Hoon FFI.  PR #59 contains work towards supporting and testing strings.
+- Current status:  String and Chars literals, `+` concatenation, `lent(s)` byte-length, `s[i]` byte-index, and `s[i:j]` byte-slice are all implemented and correct.  String ops compile to Nock calls to `met`/`cat`/`cut` from hoon.hoon.  **Performance is very slow** because these arms are unjetted — see "Jet Matching" below.  String tests hang on CI until jetting is resolved.
+
+## Jet Matching
+
+Enable jet dispatch for hoon.hoon arms so that string operations and arithmetic run at native speed.
+
+### Background
+
+Jock's compiler (`jock.hoon`) calls standard Hoon library arms (`met`, `cat`, `cut`, `add`, `sub`, etc.) from `hoon.hoon` at runtime to implement string ops and arithmetic.  NockApp's jet system could replace these with fast Rust implementations — but jets only fire when the called battery has matching hint labels registered.
+
+The hint mechanism requires:
+- A core-level hint `~%  %k.136  ~  ~` on the Hoon core
+- Per-arm hints `~/  %arm-name` on each arm to be jetted
+
+`hoon.hoon` already has the `~%  %k.136  ~  ~` core-level hint, but has **no** per-arm `~/` hints — and `hoon.hoon` cannot be modified.  As a result, the hot state entries in `crates/jockc/main.rs` register the right paths but never fire.
+
+### Proposed fix: `jruntime.hoon`
+
+Create a new file `common/hoon/lib/jruntime.hoon` (freely modifiable) that:
+
+1. Has `~%  %k.136  ~  ~` and per-arm `~/  %name` hints
+2. Contains wet-gate wrappers that delegate to the corresponding hoon.hoon arms in the subject
+3. Is compiled into `jockc.jam` as part of the Jock kernel
+4. Is callable from jock.hoon's codegen for the specific arms that need jetting
+
+Example structure:
+```hoon
+~%  %k.136  ~  ~
+|%
+~/  %met
+++  met  |*([a=bloq b=*] (met:hoon a b))
+~/  %cat
+++  cat  |*([a=bloq b=* c=*] (cat:hoon a b c))
+~/  %cut
+++  cut  |*([a=bloq b=[p=@ q=@] c=*] (cut:hoon a b c))
+~/  %add
+++  add  |*([a=@ b=@] (add:hoon a b))
+:: ... all other jetted arms ...
+--
+```
+
+When jetted, the Rust implementation runs directly (bypassing the wrapper body).  When not jetted (fallback), the wrapper delegates to hoon.hoon — correct but slow.  Two cores having the same `%k.136` label don't conflict: each registers by its own battery hash.
+
+### Implementation steps
+
+1. **`common/hoon/lib/jruntime.hoon`** — create the wrapper file with all arms that should be jetted.  Wet gates required (dry gates cause rest-loop during jock.hoon mint).  Arms needed at minimum: `met`, `cat`, `cut`, `add`, `dec`, `sub`, `mul`, `div`, `mod`, `dvr`, `gte`, `gth`, `lte`, `lth`, `mug`, `dor`, `gor`, `mor`.
+
+2. **`crates/jockc/hoon/lib/jruntime.hoon`** — symlink or copy into jockc's lib dir so `hoonc` compiles it into `jockc.jam`.
+
+3. **`common/hoon/lib/jock.hoon`** — add a `jruntime-lib` arm alongside `hoon-lib` that resolves the jruntime core from the Jock compiler's subject.  Update `make-hoon-binop` (and `make-hoon-call`) to route jetted arms through `jruntime-lib` instead of `hoon-lib`.
+
+4. **`crates/jockc/main.rs`** — restore hot state entries for `met`, `cat`, `cut` (removed in cleanup); verify all other entries are present.  The `jet_met`/`jet_cat`/`jet_cut` Rust implementations must handle the wet-gate sample axis correctly (`+<+<` not `+<`).
+
+5. **Build and test** — `make clean-jam && make jockc`, then run string tests; they should complete within timeout.  Run full test suite to confirm no regressions.
+
+### Known complication
+
+Wet gate sample extraction: for a wet gate `|*([a b] ...)`, the sample is at a different axis than for a dry gate.  The Rust jet implementations in `nockvm` must extract arguments at the correct axis.  Confirmed axis for wet gates: `+<+<.gate` (not `+<.gate`).  Verify each jet implementation handles this.
