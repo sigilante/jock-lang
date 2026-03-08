@@ -1,0 +1,4 @@
+// String literal test: "hello" compiles to a cord
+import hoon;
+let s = "hello";
+s

@@ -1,0 +1,17 @@
+// Test map put with char keys
+let a = {'a' -> 100, 'b' -> 200};
+
+// Add new key
+a['c'] = 300;
+let b = a;
+
+// Update existing key
+let a = {'a' -> 100, 'b' -> 200};
+a['a'] = 999;
+let c = a;
+
+// Put into empty map
+let d = {->};
+d['x'] = 42;
+
+(b c d)

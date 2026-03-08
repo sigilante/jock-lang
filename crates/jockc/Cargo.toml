@@ -7,6 +7,7 @@ edition.workspace = true
 nockapp = { workspace = true }
 nockvm = { workspace = true }
 nockvm_macros = { workspace = true }
+either = "1"
 clap = { workspace = true, features = ["derive", "cargo", "color", "env"] }
 tokio = { workspace = true, features = ["sync"] }
 tracing = { workspace = true }

@@ -1,0 +1,11 @@
+// Test map del operation
+let a = {1 -> 100, 2 -> 200, 3 -> 300};
+
+// Delete existing key
+let b = a[!1];
+let c = b[!2];
+
+// Delete missing key
+//let d = a.[!999];
+
+(a b c)

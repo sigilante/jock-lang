@@ -1,0 +1,4 @@
+// Test map get with char keys
+import hoon;
+let m = {'a' -> 100, 'b' -> 200, 'c' -> 300};
+(m['a'] m['b'] m['c'] m['z'])
