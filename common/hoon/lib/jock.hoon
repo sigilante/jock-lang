@@ -3654,8 +3654,11 @@
         %atom
       ::  [%atom [type value] flag]
       ~|  [%atom +<+.j]
-      :-  [%1 +<+.j]
-      [^-(jype-leaf [%atom +<-.j +>.j]) %$]
+      ::  Warn if %number literal exceeds Goldilocks prime field max (p-1 = 2^64 - 2^32)
+      =/  res  :-  [%1 +<+.j]  [^-(jype-leaf [%atom +<-.j +>.j]) %$]
+      ?:  ?&(?=(%number +<-.j) (gte +<+.j (add (sub (bex 64) (bex 32)) 1)))
+        ~&([%warn-unbased-atom +<+.j] res)
+      res
     ::
         %noun
       ::  [%noun [type value]]
