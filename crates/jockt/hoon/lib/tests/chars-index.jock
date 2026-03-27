@@ -1,0 +1,4 @@
+// Chars byte indexing: 'hello'[0] returns a one-byte Chars
+import hoon;
+let c = 'hello';
+c[0]

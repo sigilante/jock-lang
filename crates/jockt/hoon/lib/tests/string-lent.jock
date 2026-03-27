@@ -1,0 +1,4 @@
+// lent on a String returns byte count
+import hoon;
+let s = "hello";
+lent(s)

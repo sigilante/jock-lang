@@ -1,0 +1,4 @@
+// String byte slicing: s[i:j]
+import hoon;
+let s = "hello";
+s[1:4]

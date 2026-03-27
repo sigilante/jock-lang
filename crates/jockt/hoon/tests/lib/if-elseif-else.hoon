@@ -8,13 +8,13 @@
   'let a: @ = 3;\0a\0aif a == 3 {\0a  42\0a} else if a == 5 {\0a  17\0a} else {\0a  15\0a}\0a'
 ++  test-tokenize
   %+  expect-eq:test
-    !>  ~[[%keyword %let] [%name %a] [%punctuator %':'] [%punctuator %'@'] [%punctuator %'='] [%literal [[%number p=3] q=%.n]] [%punctuator %';'] [%keyword %if] [%name %a] [%punctuator %'='] [%punctuator %'='] [%literal [[%number p=3] q=%.n]] [%punctuator %'{'] [%literal [[%number p=42] q=%.n]] [%punctuator %'}'] [%keyword %else] [%punctuator %'{'] [%literal [[%number p=17] q=%.n]] [%punctuator %'}']]
-    !>  (rash text parse-tokens:jock)
+    !>  ^-  (list token-body:jock)  ~[[%keyword %let] [%name %a] [%punctuator %':'] [%punctuator %'@'] [%punctuator %'='] [%literal [[%number p=3] q=%.n]] [%punctuator %';'] [%keyword %if] [%name %a] [%punctuator %'='] [%punctuator %'='] [%literal [[%number p=3] q=%.n]] [%punctuator %'{'] [%literal [[%number p=42] q=%.n]] [%punctuator %'}'] [%keyword %else] [%punctuator %'{'] [%literal [[%number p=17] q=%.n]] [%punctuator %'}']]
+    !>  `(list token-body:jock)`(turn (rash text parse-tokens:jock) |=(=token:jock +.token))
 ::
 ++  test-jeam
   %+  expect-eq:test
     !>  ^-  jock:jock
-        [%let type=[p=[%atom p=%number q=%.n] name='a'] val=[%atom p=[[%number p=3] q=%.n]] next=[%if cond=[%compare comp=%'==' a=[%limb p=~[[%name p=%a]]] b=[%atom p=[[%number p=3] q=%.n]]] then=[%atom p=[[%number p=42] q=%.n]] after=[%else then=[%atom p=[[%number p=17] q=%.n]]]]]
+        [%let pos=[0 0] type=[p=[%atom p=%number q=%.n] name='a'] val=[%atom p=[[%number p=3] q=%.n]] next=[%if pos=[0 0] cond=[%compare comp=%'==' a=[%limb p=~[[%name p=%a]]] b=[%atom p=[[%number p=3] q=%.n]]] then=[%atom p=[[%number p=42] q=%.n]] after=[%else then=[%atom p=[[%number p=17] q=%.n]]]]]
     !>  (jeam:jock text)
 ::
 ++  test-mint
