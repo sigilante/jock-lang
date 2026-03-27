@@ -1,5 +1,20 @@
 # Roadmap
 
+## `BasedAtom` type
+
+Add a first-class `BasedAtom` type representing a Goldilocks prime field element — distinct from `Atom` (arbitrary precision).
+
+A `BasedAtom` is a value in `[0, p−1]` where `p = 2^64 − 2^32 + 1`.  The distinction matters for zkVM contexts where field arithmetic is the native operation and overflow-reduction is semantically significant.
+
+### Design sketch
+
+- Add `%based` to `jatom-type` and to the `jatom` union; surface as `BasedAtom` in Jock source.
+- Parser: `BasedAtom` maps to `[%atom %based %.n]`; literals that parse as `BasedAtom` are bounds-checked at parse time (error, not warning).
+- Arithmetic operators (`+`, `-`, `*`, etc.) on two `BasedAtom` operands emit field-arithmetic Nock (reduction mod p) rather than arbitrary-precision arithmetic.
+- A `BasedAtom` inferred from a literal `%number` that fits in the field may be silently promoted; one that does not fit is a compile error.
+- Casting: `val as BasedAtom` performs runtime reduction mod p.
+- Current status: `%number` literals that exceed the field maximum produce a compile-time `%warn-unbased-atom` warning (implemented); full type-system integration is deferred until jetting is complete.
+
 ## Cache noun builds
 
 Cache large noun builds.
